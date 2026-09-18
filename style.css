@@ -1,0 +1,19 @@
+#laberinto {
+  display: grid;
+  gap: 1px;
+  width: fit-content;
+  margin: 20px auto;
+}
+
+.celda {
+  width: 24px;
+  height: 24px;
+}
+
+.pared {
+  background-color: #333;
+}
+
+.camino {
+  background-color: #eee;
+}
