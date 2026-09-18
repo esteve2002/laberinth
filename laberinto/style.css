@@ -1,13 +1,13 @@
 #laberinto {
   display: grid;
-  gap: 1px;
+  gap: 3px;
   width: fit-content;
-  margin: 20px auto;
+  margin: 10px auto;
 }
 
 .celda {
-  width: 24px;
-  height: 24px;
+  width: 45px;
+  height: 45px;
 }
 
 .pared {
