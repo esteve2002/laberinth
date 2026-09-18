@@ -17,3 +17,8 @@
 .camino {
   background-color: green;
 }
+
+.personaje {
+  background-color: #e63946;
+  border-radius: 50%;
+}
