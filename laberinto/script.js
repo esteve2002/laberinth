@@ -110,4 +110,4 @@ pintarLaberinto(laberinto, personaje);
 setInterval(() => {
   personaje = moverPersonajeAleatorio(laberinto, personaje);
   pintarLaberinto(laberinto, personaje);
-}, 400); // cada 400ms se mueve a una celda vecina aleatoria
+}, 30); // cada 400ms se mueve a una celda vecina aleatoria
