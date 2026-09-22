@@ -120,4 +120,4 @@ pintarLaberinto(ctx, laberinto, personaje);
 setInterval(() => {
   personaje = moverPersonajeAleatorio(laberinto, personaje);
   pintarLaberinto(ctx, laberinto, personaje);
-}, 30);
+}, 300);
