@@ -1,4 +1,4 @@
-# 🧩 Laberinto
+# 🧩 Laberinto en JS vanilla
 
 Generador y solucionador de laberintos hecho con **HTML, CSS y JavaScript vanilla** (sin frameworks), como parte de mi portfolio de programación. El objetivo es practicar fundamentos: manipulación del DOM, `<canvas>`, estructuras de datos (matrices, colas) y algoritmos de búsqueda de caminos.
 
