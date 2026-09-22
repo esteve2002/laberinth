@@ -3,10 +3,12 @@
   gap: 3px;
   width: fit-content;
   margin: 10px auto;
+  border-radius: 30%;
+  box-shadow: violet;
 }
 
 .celda {
-  width: 45px;
+  width: 45px; 
   height: 45px;
   border-radius: 15px;
 }
