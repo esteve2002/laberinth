@@ -73,41 +73,51 @@ function moverPersonajeAleatorio(laberinto, pos) {
 }
 
 // --------------------------------------------------------------------------
-// Pieza 3: pintar (ya no depende de nada de lo anterior, solo recibe datos)
+// Pieza 3: pintar con canvas
 // --------------------------------------------------------------------------
-function pintarLaberinto(laberinto, personaje) {
-  const contenedor = document.getElementById("laberinto");
-  contenedor.innerHTML = ""; // limpiar antes de repintar
+const TAMANO_CELDA = 24;
+
+function pintarLaberinto(ctx, laberinto, personaje) {
   const filas = laberinto.length;
   const columnas = laberinto[0].length;
 
-  contenedor.style.gridTemplateColumns = `repeat(${columnas}, 24px)`;
-
   for (let f = 0; f < filas; f++) {
     for (let c = 0; c < columnas; c++) {
-      const celda = document.createElement("div");
-      celda.classList.add("celda");
+      const x = c * TAMANO_CELDA;
+      const y = f * TAMANO_CELDA;
 
-      if (personaje && personaje.f === f && personaje.c === c) {
-        celda.classList.add("personaje");
+      if (laberinto[f][c] === 1) {
+        ctx.fillStyle = "#2b2b2b"; // pared
       } else {
-        celda.classList.add(laberinto[f][c] === 1 ? "pared" : "camino");
+        ctx.fillStyle = "#f4f4f4"; // camino
       }
- 
-      contenedor.appendChild(celda);
+      ctx.fillRect(x, y, TAMANO_CELDA, TAMANO_CELDA);
     }
   }
+
+  // Personaje (círculo en vez de cuadrado, se ve mejor)
+  const cx = personaje.c * TAMANO_CELDA + TAMANO_CELDA / 2;
+  const cy = personaje.f * TAMANO_CELDA + TAMANO_CELDA / 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, TAMANO_CELDA / 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = "#e63946";
+  ctx.fill();
 }
 
 // --------------------------------------------------------------------------
 // Arranque
 // --------------------------------------------------------------------------
-const laberinto = generarLaberinto(9, 13); // cambia el tamaño a tu gusto
+const laberinto = generarLaberinto(9, 13);
 let personaje = colocarPersonajeAleatorio(laberinto);
 
-pintarLaberinto(laberinto, personaje);
+const canvas = document.getElementById("laberinto");
+canvas.width = laberinto[0].length * TAMANO_CELDA;
+canvas.height = laberinto.length * TAMANO_CELDA;
+const ctx = canvas.getContext("2d");
+
+pintarLaberinto(ctx, laberinto, personaje);
 
 setInterval(() => {
   personaje = moverPersonajeAleatorio(laberinto, personaje);
-  pintarLaberinto(laberinto, personaje);
-}, 30); // cada 400ms se mueve a una celda vecina aleatoria
+  pintarLaberinto(ctx, laberinto, personaje);
+}, 30);
