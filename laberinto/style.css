@@ -8,10 +8,12 @@
 .celda {
   width: 45px;
   height: 45px;
+  border-radius: 15px;
 }
 
 .pared {
   background-color: red;
+  border-radius: 3px;
 }
 
 .camino {
