@@ -6,7 +6,7 @@ Generador y solucionador de laberintos hecho con **HTML, CSS y JavaScript vanill
 
 👉 [Ver el laberinto en vivo](https://esteve2002.github.io/laberinth/laberinto/)
 
-## 🛠️ Tecnologías
+## 🛠️ Tecnologías del proyecto
 
 - HTML5 + `<canvas>`
 - CSS3
