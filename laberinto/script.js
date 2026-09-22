@@ -87,7 +87,7 @@ function pintarLaberinto(ctx, laberinto, personaje) {
       const y = f * TAMANO_CELDA;
 
       if (laberinto[f][c] === 1) {
-        ctx.fillStyle = "hsla(197, 80%, 45%, 0.49)"; // pared
+        ctx.fillStyle = "hsla(197, 79%, 50%, 0.49)"; // pared
       } else {
         ctx.fillStyle = "#f4f4f4"; // camino
       }
