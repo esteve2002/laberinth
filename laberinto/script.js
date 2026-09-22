@@ -115,9 +115,33 @@ canvas.width = laberinto[0].length * TAMANO_CELDA;
 canvas.height = laberinto.length * TAMANO_CELDA;
 const ctx = canvas.getContext("2d");
 
-pintarLaberinto(ctx, laberinto, personaje);
+// DETERMINAMOS LAS POCICIONES ACTUALES EN PIXELES
 
-setInterval(() => {
+
+let posActualX = personaje.c * TAMANO_CELDA + TAMANO_CELDA / 2;
+let posActualY = personaje.f * TAMANO_CELDA + TAMANO_CELDA / 2;
+
+// Posición objetivo en píxeles (hacia donde se está moviendo)
+let posObjetivoX = posActualX;
+let posObjetivoY = posActualY;
+
+const VELOCIDAD = 0.08; // 0 = no se mueve, 1 = movimiento instantáneo. Ajusta a tu gusto
+
+function actualizarObjetivo() {
   personaje = moverPersonajeAleatorio(laberinto, personaje);
-  pintarLaberinto(ctx, laberinto, personaje);
-}, 300);
+  posObjetivoX = personaje.c * TAMANO_CELDA + TAMANO_CELDA / 2;
+  posObjetivoY = personaje.f * TAMANO_CELDA + TAMANO_CELDA / 2;
+}
+
+function animar() {
+  // Interpola suavemente hacia el objetivo
+  posActualX += (posObjetivoX - posActualX) * VELOCIDAD;
+  posActualY += (posObjetivoY - posActualY) * VELOCIDAD;
+
+  pintarLaberinto(ctx, laberinto, posActualX, posActualY);
+  requestAnimationFrame(animar);
+}
+
+animar(); // arranca el bucle de dibujado suave
+
+setInterval(actualizarObjetivo, 400); // cada 400ms decide la SIGUIENTE celda destino
