@@ -93,7 +93,7 @@ function pintarLaberinto(laberinto, personaje) {
       } else {
         celda.classList.add(laberinto[f][c] === 1 ? "pared" : "camino");
       }
-
+ 
       contenedor.appendChild(celda);
     }
   }
