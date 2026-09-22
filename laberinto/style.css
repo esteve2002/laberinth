@@ -1,10 +1,7 @@
 #laberinto {
-  display: grid;
-  gap: 3px;
-  width: fit-content;
+  display: block;
   margin: 10px auto;
-  border-radius: 30%;
-  box-shadow: violet;
+  border: 2px solid black; /* para verlo claramente aunque el resto falle */
 }
 
 .celda {
