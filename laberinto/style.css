@@ -3,21 +3,3 @@
   margin: 10px auto;
   border: 2px solid black; /* para verlo claramente aunque el resto falle */
 }
-
-.celda {
-  width: 45px; 
-  height: 45px;
-}
-
-.pared {
-  background-color: red;
-}
-
-.camino {
-  background-color: green;
-}
-
-.personaje {
-  background-color: yellow;
-  border-radius: 50%;
-}
