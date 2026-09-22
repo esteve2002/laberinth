@@ -2,6 +2,6 @@
   display: block;
   margin: 10px auto;
   border: 2px solid black; /* para verlo claramente aunque el resto falle */
-  width: 500;
+  width: 400px;
   height: 300px; 
 } 
