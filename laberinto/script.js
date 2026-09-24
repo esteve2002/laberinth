@@ -57,14 +57,14 @@ function colocarPersonajeAleatorio(laberinto) {
 // Pieza 2: colocar la entrada y la salida de el camino
 // --------------------------------------------------------------------------
 function colocarEntradaYSalidaLaberinto(personajeX, personajeY){
-  const TAMANO_CELDA_entrada_salida = 24;
-  ctx.beginPath();
-  ctx.arc(personajeX, personajeY, TAMANO_CELDA_entrada_salida / 2.5, 0, Math.PI * 2);
-  ctx.fillStyle = "#008a17";
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "#7a0f19";
-  ctx.stroke();
+  for (let f = 0; f < laberinto.length; f++) {
+    for (let c = 0; c < laberinto[0].length; c++) {
+      ctx.fillStyle = laberinto[f][c] === 1
+        ? "hsla(197, 79%, 50%, 0.49)" // pared
+        : "#f4f4f4";                   // camino
+      ctx.fillRect(c * TAMANO_CELDA, f * TAMANO_CELDA, TAMANO_CELDA, TAMANO_CELDA);
+    }
+  }
 }
 
 // Intenta mover al personaje una celda. df = cambio de fila, dc = cambio de columna.
