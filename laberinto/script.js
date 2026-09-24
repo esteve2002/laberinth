@@ -42,7 +42,7 @@ function generarLaberinto(filas, columnas) {
 }
 
 // --------------------------------------------------------------------------
-// Pieza 2: colocar al personaje y moverlo
+// Pieza 2: personaje, entrada y salida
 // --------------------------------------------------------------------------
 function colocarPersonajeAleatorio(laberinto) {
   const caminos = [];
@@ -53,9 +53,9 @@ function colocarPersonajeAleatorio(laberinto) {
   }
   return caminos[Math.floor(Math.random() * caminos.length)];
 }
-// --------------------------------------------------------------------------
-// Pieza 2: colocar la entrada y la salida de el camino
-// --------------------------------------------------------------------------
+
+// La entrada es la celda donde nace el personaje (ya la conocemos, no hay que buscarla).
+// La salida es un camino al azar que NO sea la entrada.
 function colocarEntradaYSalida(laberinto, entrada) {
   const caminos = [];
   for (let f = 0; f < laberinto.length; f++) {
@@ -88,6 +88,7 @@ function moverPersonaje(laberinto, pos, df, dc) {
 // Pieza 3: pintar con canvas
 // --------------------------------------------------------------------------
 const TAMANO_CELDA = 24;
+const COLOR_ENTRADA_SALIDA = "#2ecc71"; // verde
 
 function centroCelda(fila, columna) {
   return {
@@ -96,7 +97,19 @@ function centroCelda(fila, columna) {
   };
 }
 
-function pintarLaberinto(ctx, laberinto, personajeX, personajeY) {
+// Pinta una celda entera de un color (columna -> x, fila -> y)
+function pintarCelda(ctx, celda, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(
+    celda.c * TAMANO_CELDA,
+    celda.f * TAMANO_CELDA,
+    TAMANO_CELDA,
+    TAMANO_CELDA
+  );
+}
+
+function pintarLaberinto(ctx, laberinto, entrada, salida, personajeX, personajeY) {
+  // 1. Paredes y caminos
   for (let f = 0; f < laberinto.length; f++) {
     for (let c = 0; c < laberinto[0].length; c++) {
       ctx.fillStyle = laberinto[f][c] === 1
@@ -106,6 +119,11 @@ function pintarLaberinto(ctx, laberinto, personajeX, personajeY) {
     }
   }
 
+  // 2. Entrada y salida en verde (antes del personaje, para que quede encima)
+  pintarCelda(ctx, entrada, COLOR_ENTRADA_SALIDA);
+  pintarCelda(ctx, salida, COLOR_ENTRADA_SALIDA);
+
+  // 3. Personaje
   ctx.beginPath();
   ctx.arc(personajeX, personajeY, TAMANO_CELDA / 2.5, 0, Math.PI * 2);
   ctx.fillStyle = "#e63946";
@@ -120,7 +138,6 @@ function pintarLaberinto(ctx, laberinto, personajeX, personajeY) {
 // --------------------------------------------------------------------------
 const laberinto = generarLaberinto(9, 13);
 let personaje = colocarPersonajeAleatorio(laberinto);
-
 const { entrada, salida } = colocarEntradaYSalida(laberinto, personaje);
 
 const canvas = document.getElementById("laberinto");
@@ -141,11 +158,11 @@ let posActualY = inicio.y;
 let posObjetivoX = posActualX;
 let posObjetivoY = posActualY;
 
+if (DEBUG) console.log("entrada:", entrada, "salida:", salida);
+
 // --------------------------------------------------------------------------
 // Control por teclado
 // --------------------------------------------------------------------------
-// Cada tecla se traduce a un cambio de [fila, columna].
-// Usamos e.code (tecla física) para que WASD funcione en cualquier idioma de teclado.
 const MOVIMIENTOS = {
   ArrowUp:    [-1, 0],
   ArrowDown:  [1, 0],
@@ -159,14 +176,13 @@ const MOVIMIENTOS = {
 
 document.addEventListener("keydown", (e) => {
   const movimiento = MOVIMIENTOS[e.code];
-  if (!movimiento) return; // no es una tecla de movimiento, la ignoramos
+  if (!movimiento) return;
 
-  e.preventDefault(); // evita que las flechas hagan scroll en la página
+  e.preventDefault();
 
   const [df, dc] = movimiento;
   personaje = moverPersonaje(laberinto, personaje, df, dc);
 
-  // Actualizamos SOLO el objetivo: la animación se encarga de ir hasta allí
   const destino = centroCelda(personaje.f, personaje.c);
   posObjetivoX = destino.x;
   posObjetivoY = destino.y;
@@ -177,7 +193,6 @@ document.addEventListener("keydown", (e) => {
 // --------------------------------------------------------------------------
 // Bucle de animación
 // --------------------------------------------------------------------------
-// Cuánto de rápido "persigue" al objetivo. Mayor = más rápido.
 const SUAVIZADO = 15;
 
 let ultimoTiempo = performance.now();
@@ -190,7 +205,7 @@ function animar(ahora) {
   posActualX += (posObjetivoX - posActualX) * factor;
   posActualY += (posObjetivoY - posActualY) * factor;
 
-  pintarLaberinto(ctx, laberinto, posActualX, posActualY);
+  pintarLaberinto(ctx, laberinto, entrada, salida, posActualX, posActualY);
   requestAnimationFrame(animar);
 }
 
