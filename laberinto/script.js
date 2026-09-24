@@ -134,52 +134,56 @@ let posActualY = inicio.y;
 let posObjetivoX = posActualX;
 let posObjetivoY = posActualY;
 
-if (DEBUG) {
-  console.log("canvas:", canvas.width + "x" + canvas.height, "ctx:", ctx);
-  console.log("personaje inicial (celda):", personaje, "→ px:", posActualX, posActualY);
-}
-
-// Cuánto de rápido "persigue" al objetivo. Mayor = más rápido.
-// Con 8, en 400 ms recorre ~96% del camino, independientemente de los FPS.
-const SUAVIZADO = 8;
-
-function actualizarObjetivo() {
-  personaje = moverPersonajeAleatorio(laberinto, personaje);
+// --------------------------------------------------------------------------
+// Control por teclado
+// --------------------------------------------------------------------------
+// Cada tecla se traduce a un cambio de [fila, columna].
+// Usamos e.code (tecla física) para que WASD funcione en cualquier idioma de teclado.
+const MOVIMIENTOS = {
+  ArrowUp:    [-1, 0],
+  ArrowDown:  [1, 0],
+  ArrowLeft:  [0, -1],
+  ArrowRight: [0, 1],
+  KeyW:       [-1, 0],
+  KeyS:       [1, 0],
+  KeyA:       [0, -1],
+  KeyD:       [0, 1],
+};
+ 
+document.addEventListener("keydown", (e) => {
+  const movimiento = MOVIMIENTOS[e.code];
+  if (!movimiento) return; // no es una tecla de movimiento, la ignoramos
+ 
+  e.preventDefault(); // evita que las flechas hagan scroll en la página
+ 
+  const [df, dc] = movimiento;
+  personaje = moverPersonaje(laberinto, personaje, df, dc);
+ 
+  // Actualizamos SOLO el objetivo: la animación se encarga de ir hasta allí
   const destino = centroCelda(personaje.f, personaje.c);
   posObjetivoX = destino.x;
   posObjetivoY = destino.y;
-}
-
+ 
+  if (DEBUG) console.log("tecla:", e.code, "→ celda:", personaje);
+});
+ 
+// --------------------------------------------------------------------------
+// Bucle de animación
+// --------------------------------------------------------------------------
+// Cuánto de rápido "persigue" al objetivo. Mayor = más rápido.
+const SUAVIZADO = 15;
+ 
 let ultimoTiempo = performance.now();
-let frame = 0;
-
+ 
 function animar(ahora) {
-  // Tiempo real entre fotogramas (en segundos), con tope por si se pausa la pestaña
   const dt = Math.min((ahora - ultimoTiempo) / 1000, 0.1);
   ultimoTiempo = ahora;
-
-  // Interpolación suave que va igual a 60 Hz que a 144 Hz
+ 
   const factor = 1 - Math.exp(-SUAVIZADO * dt);
   posActualX += (posObjetivoX - posActualX) * factor;
   posActualY += (posObjetivoY - posActualY) * factor;
-
-  if (DEBUG && frame++ % 60 === 0) {
-    console.log("animar:", posActualX.toFixed(1), posActualY.toFixed(1));
-    if (Number.isNaN(posActualX) || Number.isNaN(posActualY)) {
-      console.error("¡Posición NaN! Revisa los cálculos de posición.");
-    }
-  }
-
+ 
   pintarLaberinto(ctx, laberinto, posActualX, posActualY);
   requestAnimationFrame(animar);
 }
-
-// FUNCION PARA MOVER EL PERSONAJE
-
-function moverPersonajeDelLaberinto(laberinto, personajeX, personajeY){
-  
-}
-
-requestAnimationFrame(animar); // arranca el bucle de dibujado suave
-
 setInterval(actualizarObjetivo, 400); // cada 400 ms decide la SIGUIENTE celda destino
