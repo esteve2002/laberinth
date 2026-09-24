@@ -62,11 +62,6 @@ function colocarEntradaYSalidaLaberinto(personajeX, personajeY){
       if(laberinto[f][c] != laberinto[personajeX][personajeY]){
         
       }
-
-      ctx.fillStyle = laberinto[f][c] != laberinto[personajeX][personajeY]
-        ? "hsla(135, 100%, 35%, 0.49)" // pared
-        : "#f4f4f4";                   // camino
-      ctx.fillRect(c * TAMANO_CELDA, f * TAMANO_CELDA, TAMANO_CELDA, TAMANO_CELDA);
     }
   }
 }
