@@ -54,7 +54,7 @@ function colocarPersonajeAleatorio(laberinto) {
   return caminos[Math.floor(Math.random() * caminos.length)];
 }
 // --------------------------------------------------------------------------
-// Pieza 2: colocar al personaje y moverlo
+// Pieza 2: colocar la entrada y la salida de el camino
 // --------------------------------------------------------------------------
 
 
