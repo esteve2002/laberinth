@@ -15,4 +15,8 @@ body{
   border-radius: 15%;
   box-shadow: 3px solid red;
   font-family: "Loved by the King", cursive;
-} 
+}
+
+body .title{
+  text-align: center;
+}
