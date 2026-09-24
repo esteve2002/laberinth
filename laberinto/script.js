@@ -57,7 +57,6 @@ function colocarPersonajeAleatorio(laberinto) {
 // Pieza 2: colocar la entrada y la salida de el camino
 // --------------------------------------------------------------------------
 function colocarEntradaYSalidaLaberinto(personajeX, personajeY){
-  let personaje = colocarPersonajeAleatorio(laberinto);
   ctx.beginPath();
   ctx.arc(personajeX, personajeY, TAMANO_CELDA / 2.5, 0, Math.PI * 2);
   ctx.fillStyle = "#e63946";
