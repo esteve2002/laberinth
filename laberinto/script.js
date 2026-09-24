@@ -59,7 +59,7 @@ function colocarPersonajeAleatorio(laberinto) {
 function colocarEntradaYSalidaLaberinto(personajeX, personajeY){
   ctx.beginPath();
   ctx.arc(personajeX, personajeY, TAMANO_CELDA / 2.5, 0, Math.PI * 2);
-  ctx.fillStyle = "#e63946";
+  ctx.fillStyle = "";
   ctx.fill();
   ctx.lineWidth = 2;
   ctx.strokeStyle = "#7a0f19";
