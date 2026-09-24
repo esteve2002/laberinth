@@ -17,6 +17,13 @@ body{
   font-family: "Loved by the King", cursive;
 }
 
+.loved-by-the-king-regular {
+  font-family: "Loved by the King", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
 body .title{
   text-align: center;
 }
