@@ -54,6 +54,8 @@ function colocarPersonajeAleatorio(laberinto) {
   return caminos[Math.floor(Math.random() * caminos.length)];
 }
 
+
+
 // Intenta mover al personaje una celda. df = cambio de fila, dc = cambio de columna.
 // Devuelve la nueva posición si se puede, o la misma si hay pared / borde.
 function moverPersonaje(laberinto, pos, df, dc) {
