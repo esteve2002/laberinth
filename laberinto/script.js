@@ -177,7 +177,7 @@ function animar(ahora) {
 // FUNCION PARA MOVER EL PERSONAJE
 
 function moverPersonajeDelLaberinto(laberinto, personajeX, personajeY){
-  on
+  
 }
 
 requestAnimationFrame(animar); // arranca el bucle de dibujado suave
