@@ -77,7 +77,7 @@ function moverPersonajeAleatorio(laberinto, pos) {
 // --------------------------------------------------------------------------
 const TAMANO_CELDA = 24;
 
-function pintarLaberinto(ctx, laberinto, personaje) {
+function pintarLaberinto(ctx, laberinto, personajeX, personajeY) {
   const filas = laberinto.length;
   const columnas = laberinto[0].length;
 
@@ -86,20 +86,16 @@ function pintarLaberinto(ctx, laberinto, personaje) {
       const x = c * TAMANO_CELDA;
       const y = f * TAMANO_CELDA;
 
-      if (laberinto[f][c] === 1) {
-        ctx.fillStyle = "hsla(197, 79%, 50%, 0.49)"; // pared
-      } else {
-        ctx.fillStyle = "#f4f4f4"; // camino
-      }
+      ctx.fillStyle = laberinto[f][c] === 1
+        ? "hsla(197, 79%, 50%, 0.49)" // pared
+        : "#f4f4f4";                   // camino
       ctx.fillRect(x, y, TAMANO_CELDA, TAMANO_CELDA);
     }
   }
 
-  // Personaje (círculo en vez de cuadrado, se ve mejor)
-  const cx = personaje.c * TAMANO_CELDA + TAMANO_CELDA / 2;
-  const cy = personaje.f * TAMANO_CELDA + TAMANO_CELDA / 2;
+  // Personaje: ya viene en píxeles, no hace falta multiplicar
   ctx.beginPath();
-  ctx.arc(cx, cy, TAMANO_CELDA / 2.5, 0, Math.PI * 2);
+  ctx.arc(personajeX, personajeY, TAMANO_CELDA / 2.5, 0, Math.PI * 2);
   ctx.fillStyle = "#e63946";
   ctx.fill();
 }
