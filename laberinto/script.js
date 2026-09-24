@@ -186,4 +186,5 @@ function animar(ahora) {
   pintarLaberinto(ctx, laberinto, posActualX, posActualY);
   requestAnimationFrame(animar);
 }
+
 setInterval(actualizarObjetivo, 400); // cada 400 ms decide la SIGUIENTE celda destino
