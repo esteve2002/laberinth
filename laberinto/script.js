@@ -121,6 +121,8 @@ function pintarLaberinto(ctx, laberinto, personajeX, personajeY) {
 const laberinto = generarLaberinto(9, 13);
 let personaje = colocarPersonajeAleatorio(laberinto);
 
+const { entrada, salida } = colocarEntradaYSalida(laberinto, personaje);
+
 const canvas = document.getElementById("laberinto");
 if (!canvas) {
   throw new Error(
