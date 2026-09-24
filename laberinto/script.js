@@ -58,6 +58,7 @@ function colocarPersonajeAleatorio(laberinto) {
 // --------------------------------------------------------------------------
 function colocarEntradaYSalidaLaberinto(posEntrada){
   const posicion_salida = caminos;
+  
 }
 
 // Intenta mover al personaje una celda. df = cambio de fila, dc = cambio de columna.
