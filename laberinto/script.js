@@ -57,7 +57,7 @@ function colocarPersonajeAleatorio(laberinto) {
 // Pieza 2: colocar la entrada y la salida de el camino
 // --------------------------------------------------------------------------
 function colocarEntradaYSalidaLaberinto(posEntrada){
-  const posicion_salida = caminos;
+  let personaje = colocarPersonajeAleatorio(laberinto);
 
 }
 
