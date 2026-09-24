@@ -176,7 +176,7 @@ function animar(ahora) {
 
 // FUNCION PARA MOVER EL PERSONAJE
 
-function moverPersonajeDelLaberinto(){
+function moverPersonajeDelLaberinto(laberinto, personajeX, perso){
 
 }
 
