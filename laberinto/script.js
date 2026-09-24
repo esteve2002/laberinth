@@ -53,7 +53,9 @@ function colocarPersonajeAleatorio(laberinto) {
   }
   return caminos[Math.floor(Math.random() * caminos.length)];
 }
-
+// --------------------------------------------------------------------------
+// Pieza 2: colocar al personaje y moverlo
+// --------------------------------------------------------------------------
 
 
 // Intenta mover al personaje una celda. df = cambio de fila, dc = cambio de columna.
