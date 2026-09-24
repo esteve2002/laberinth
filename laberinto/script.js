@@ -59,7 +59,7 @@ function colocarPersonajeAleatorio(laberinto) {
 function colocarEntradaYSalidaLaberinto(personajeX, personajeY){
   for (let f = 0; f < laberinto.length; f++) {
     for (let c = 0; c < laberinto[0].length; c++) {
-      ctx.fillStyle = laberinto[f][c] === 1
+      ctx.fillStyle = laberinto[f][c] != 1
         ? "hsla(197, 79%, 50%, 0.49)" // pared
         : "#f4f4f4";                   // camino
       ctx.fillRect(c * TAMANO_CELDA, f * TAMANO_CELDA, TAMANO_CELDA, TAMANO_CELDA);
