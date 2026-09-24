@@ -13,7 +13,7 @@ body{
   width: 400px;
   height: 400px;
   border-radius: 15%;
-  box-shadow: 3px solid red;
+  box-shadow: 4px 6px 12px 0px rgba(0, 0, 0, 0.3);
   font-family: "Loved by the King", cursive;
 }
 
