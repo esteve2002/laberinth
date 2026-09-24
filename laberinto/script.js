@@ -56,14 +56,16 @@ function colocarPersonajeAleatorio(laberinto) {
 // --------------------------------------------------------------------------
 // Pieza 2: colocar la entrada y la salida de el camino
 // --------------------------------------------------------------------------
-function colocarEntradaYSalidaLaberinto(personajeX, personajeY){
+function colocarEntradaYSalida(laberinto, entrada) {
+  const caminos = [];
   for (let f = 0; f < laberinto.length; f++) {
     for (let c = 0; c < laberinto[0].length; c++) {
-      if(laberinto[f][c] != laberinto[personajeX][personajeY]){
-        
-      }
+      const esEntrada = f === entrada.f && c === entrada.c;
+      if (laberinto[f][c] === 0 && !esEntrada) caminos.push({ f, c });
     }
   }
+  const salida = caminos[Math.floor(Math.random() * caminos.length)];
+  return { entrada, salida };
 }
 
 // Intenta mover al personaje una celda. df = cambio de fila, dc = cambio de columna.
