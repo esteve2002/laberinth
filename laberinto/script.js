@@ -58,7 +58,13 @@ function colocarPersonajeAleatorio(laberinto) {
 // --------------------------------------------------------------------------
 function colocarEntradaYSalidaLaberinto(personajeX, personajeY){
   let personaje = colocarPersonajeAleatorio(laberinto);
-
+  ctx.beginPath();
+  ctx.arc(personajeX, personajeY, TAMANO_CELDA / 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = "#e63946";
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#7a0f19";
+  ctx.stroke();
 }
 
 // Intenta mover al personaje una celda. df = cambio de fila, dc = cambio de columna.
