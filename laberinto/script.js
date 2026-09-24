@@ -174,6 +174,12 @@ function animar(ahora) {
   requestAnimationFrame(animar);
 }
 
+// FUNCION PARA MOVER EL PERSONAJE
+
+function moverPersonajeDelLaberinto(){
+
+}
+
 requestAnimationFrame(animar); // arranca el bucle de dibujado suave
 
 setInterval(actualizarObjetivo, 400); // cada 400 ms decide la SIGUIENTE celda destino
