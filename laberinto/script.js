@@ -56,7 +56,9 @@ function colocarPersonajeAleatorio(laberinto) {
 // --------------------------------------------------------------------------
 // Pieza 2: colocar la entrada y la salida de el camino
 // --------------------------------------------------------------------------
-
+function colocarEntradaYSalidaLaberinto(posEntrada){
+  
+}
 
 // Intenta mover al personaje una celda. df = cambio de fila, dc = cambio de columna.
 // Devuelve la nueva posición si se puede, o la misma si hay pared / borde.
