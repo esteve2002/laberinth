@@ -54,14 +54,31 @@ function colocarPersonajeAleatorio(laberinto) {
   return caminos[Math.floor(Math.random() * caminos.length)];
 }
 
+// Cuenta cuántos vecinos directos (arriba, abajo, izquierda, derecha) son pared
+function contarParedesAlrededor(laberinto, f, c) {
+  const vecinos = [
+    [-1, 0], [1, 0], [0, -1], [0, 1],
+  ];
+
+  let paredes = 0;
+  for (const [df, dc] of vecinos) {
+    const nf = f + df;
+    const nc = c + dc;
+    if (laberinto[nf][nc] === 1) paredes++;
+  }
+  return paredes;
+}
+
 // La entrada es la celda donde nace el personaje (ya la conocemos, no hay que buscarla).
-// La salida es un camino al azar que NO sea la entrada.
+// La salida es un callejón sin salida al azar (3 o más paredes alrededor) que NO sea la entrada.
 function colocarEntradaYSalida(laberinto, entrada) {
   const caminos = [];
   for (let f = 0; f < laberinto.length; f++) {
     for (let c = 0; c < laberinto[0].length; c++) {
       const esEntrada = f === entrada.f && c === entrada.c;
-      if (laberinto[f][c] === 0 && !esEntrada) caminos.push({ f, c });
+      if (laberinto[f][c] === 0 && !esEntrada && contarParedesAlrededor(laberinto, f, c) >= 3) {
+        caminos.push({ f, c });
+      }
     }
   }
   const salida = caminos[Math.floor(Math.random() * caminos.length)];
