@@ -77,6 +77,16 @@ function colocarEntradaYSalida(laberinto, entrada) {
   return { entrada, salida };
 }
 
+function comprobarSalida(laberinto, salida) {
+  for (let f = 0; f < laberinto.length; f++) {
+    for (let c = 0; c < laberinto[0].length; c++) {
+      const esSalida = f === salida.f && c === salida.c;
+      if (laberinto[f][c] === esSalida) {
+        alert("¡Has llegado a la salida!");
+      }
+    }
+}
+
 function moverPersonaje(laberinto, pos, df, dc) {
   const nf = pos.f + df;
   const nc = pos.c + dc;
@@ -226,6 +236,7 @@ const MOVIMIENTOS = {
 
 document.addEventListener("keydown", (e) => {
   const movimiento = MOVIMIENTOS[e.code];
+  comprobarSalida(laberinto, salida)
   if (!movimiento) return;
 
   e.preventDefault();
