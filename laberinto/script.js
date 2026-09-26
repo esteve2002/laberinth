@@ -77,14 +77,10 @@ function colocarEntradaYSalida(laberinto, entrada) {
   return { entrada, salida };
 }
 
-function comprobarSalida(laberinto, salida) {
-  for (let f = 0; f < laberinto.length; f++) {
-    for (let c = 0; c < laberinto[0].length; c++) {
-      const esSalida = f === salida.f && c === salida.c;
-      if (laberinto[f][c] === esSalida) {
-        alert("¡Has llegado a la salida!");
-      }
-    }
+// ¿Está el personaje sobre la celda de salida? No hace falta recorrer nada:
+// ya sabemos las dos posiciones, solo hay que compararlas.
+function haLlegadoALaSalida(personaje, salida) {
+  return personaje.f === salida.f && personaje.c === salida.c;
 }
 
 function moverPersonaje(laberinto, pos, df, dc) {
@@ -98,9 +94,14 @@ function moverPersonaje(laberinto, pos, df, dc) {
 // --------------------------------------------------------------------------
 // Pieza 3: pintar en isométrico
 // --------------------------------------------------------------------------
-const ANCHO_TILE = 32;  // ancho del rombo
-const ALTO_TILE = 16;   // alto del rombo (la mitad del ancho da el ángulo clásico)
-const ALTURA_PARED = 20; // cuánto "sobresale" una pared en vertical
+const ANCHO_TILE = 32;   // ancho del rombo
+const ALTO_TILE = 16;    // alto del rombo (la mitad del ancho da el ángulo clásico)
+// IMPORTANTE: si ALTURA_PARED es mayor que ALTO_TILE, el "tejado" de cada
+// pared se dibuja tan alto que invade el rombo de la celda de detrás (la que
+// tiene f+c menor). Esa celda de detrás puede ser un camino perfectamente
+// transitable, pero visualmente queda tapada por la pared de delante y
+// parece que ahí también hay pared. Por eso la mantenemos MENOR que ALTO_TILE.
+const ALTURA_PARED = 10;
 const COLOR_ENTRADA_SALIDA = "#2ecc71";
 
 // Convierte una celda (fila, columna) al punto CENTRAL de su rombo en pantalla,
@@ -128,12 +129,11 @@ function pintarSuelo(ctx, cx, cy, color) {
 
 // Dibuja un "cubo" (pared con altura): tejado + dos caras laterales
 function pintarBloque(ctx, cx, cy, colorTejado, colorIzq, colorDer) {
-  const top = cy - ALTO_TILE / 2;
   const right = cx + ANCHO_TILE / 2;
   const bottom = cy + ALTO_TILE / 2;
   const left = cx - ANCHO_TILE / 2;
 
-  // Cara izquierda (del punto izquierdo y abajo, hacia arriba ALTURA_PARED)
+  // Cara izquierda
   ctx.beginPath();
   ctx.moveTo(left, cy);
   ctx.lineTo(cx, bottom);
@@ -197,6 +197,7 @@ function pintarLaberinto(ctx, laberinto, entrada, salida, offsetX, offsetY, pers
 const laberinto = generarLaberinto(9, 13);
 let personaje = colocarPersonajeAleatorio(laberinto);
 const { entrada, salida } = colocarEntradaYSalida(laberinto, personaje);
+let juegoTerminado = false; // para no seguir moviendo ni repetir el mensaje tras ganar
 
 const canvas = document.getElementById("laberinto");
 if (!canvas) {
@@ -236,19 +237,24 @@ const MOVIMIENTOS = {
 
 document.addEventListener("keydown", (e) => {
   const movimiento = MOVIMIENTOS[e.code];
-  comprobarSalida(laberinto, salida)
-  if (!movimiento) return;
+  if (!movimiento) return;     // no es una tecla de movimiento
+  if (juegoTerminado) return;  // ya ganaste: ignora más teclas
 
   e.preventDefault();
 
   const [df, dc] = movimiento;
-  personaje = moverPersonaje(laberinto, personaje, df, dc);
+  personaje = moverPersonaje(laberinto, personaje, df, dc); // 1º: se mueve
 
   const destino = celdaAIsometrico(personaje.f, personaje.c, offsetX, offsetY);
   posObjetivoX = destino.x;
   posObjetivoY = destino.y;
 
   if (DEBUG) console.log("tecla:", e.code, "→ celda:", personaje);
+
+  if (haLlegadoALaSalida(personaje, salida)) {  // 2º: con la posición YA actualizada, comprobamos
+    juegoTerminado = true;
+    alert("¡Has llegado a la salida!");
+  }
 });
 
 // --------------------------------------------------------------------------
@@ -265,7 +271,7 @@ function animar(ahora) {
   posActualX += (posObjetivoX - posActualX) * factor;
   posActualY += (posObjetivoY - posActualY) * factor;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // ahora SÍ hace falta: los bloques no cubren todo el canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // los bloques no cubren todo el canvas: hay que limpiar
   pintarLaberinto(ctx, laberinto, entrada, salida, offsetX, offsetY, posActualX, posActualY);
   requestAnimationFrame(animar);
 }
