@@ -54,23 +54,15 @@ function colocarPersonajeAleatorio(laberinto) {
   return caminos[Math.floor(Math.random() * caminos.length)];
 }
 
-// Cuenta cuántos vecinos directos (arriba, abajo, izquierda, derecha) son pared
 function contarParedesAlrededor(laberinto, f, c) {
-  const vecinos = [
-    [-1, 0], [1, 0], [0, -1], [0, 1],
-  ];
-
+  const vecinos = [[-1, 0], [1, 0], [0, -1], [0, 1]];
   let paredes = 0;
   for (const [df, dc] of vecinos) {
-    const nf = f + df;
-    const nc = c + dc;
-    if (laberinto[nf][nc] === 1) paredes++;
+    if (laberinto[f + df][c + dc] === 1) paredes++;
   }
   return paredes;
 }
 
-// La entrada es la celda donde nace el personaje (ya la conocemos, no hay que buscarla).
-// La salida es un callejón sin salida al azar (3 o más paredes alrededor) que NO sea la entrada.
 function colocarEntradaYSalida(laberinto, entrada) {
   const caminos = [];
   for (let f = 0; f < laberinto.length; f++) {
@@ -85,64 +77,103 @@ function colocarEntradaYSalida(laberinto, entrada) {
   return { entrada, salida };
 }
 
-// Intenta mover al personaje una celda. df = cambio de fila, dc = cambio de columna.
-// Devuelve la nueva posición si se puede, o la misma si hay pared / borde.
 function moverPersonaje(laberinto, pos, df, dc) {
   const nf = pos.f + df;
   const nc = pos.c + dc;
-
-  const dentro =
-    nf >= 0 && nf < laberinto.length &&
-    nc >= 0 && nc < laberinto[0].length;
-
-  if (dentro && laberinto[nf][nc] === 0) {
-    return { f: nf, c: nc };
-  }
-  return pos; // pared o fuera del laberinto: no se mueve
+  const dentro = nf >= 0 && nf < laberinto.length && nc >= 0 && nc < laberinto[0].length;
+  if (dentro && laberinto[nf][nc] === 0) return { f: nf, c: nc };
+  return pos;
 }
 
 // --------------------------------------------------------------------------
-// Pieza 3: pintar con canvas
+// Pieza 3: pintar en isométrico
 // --------------------------------------------------------------------------
-const TAMANO_CELDA = 24;
-const COLOR_ENTRADA_SALIDA = "#2ecc71"; // verde
+const ANCHO_TILE = 32;  // ancho del rombo
+const ALTO_TILE = 16;   // alto del rombo (la mitad del ancho da el ángulo clásico)
+const ALTURA_PARED = 20; // cuánto "sobresale" una pared en vertical
+const COLOR_ENTRADA_SALIDA = "#2ecc71";
 
-function centroCelda(fila, columna) {
+// Convierte una celda (fila, columna) al punto CENTRAL de su rombo en pantalla,
+// ya con el desplazamiento (offsetX/Y) para que todo quepa en el canvas.
+function celdaAIsometrico(fila, columna, offsetX, offsetY) {
   return {
-    x: columna * TAMANO_CELDA + TAMANO_CELDA / 2,
-    y: fila * TAMANO_CELDA + TAMANO_CELDA / 2,
+    x: (columna - fila) * (ANCHO_TILE / 2) + offsetX,
+    y: (columna + fila) * (ALTO_TILE / 2) + offsetY,
   };
 }
 
-// Pinta una celda entera de un color (columna -> x, fila -> y)
-function pintarCelda(ctx, celda, color) {
+// Dibuja el rombo plano de una celda (el "suelo")
+function pintarSuelo(ctx, cx, cy, color) {
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - ALTO_TILE / 2); // punta de arriba
+  ctx.lineTo(cx + ANCHO_TILE / 2, cy); // punta derecha
+  ctx.lineTo(cx, cy + ALTO_TILE / 2); // punta de abajo
+  ctx.lineTo(cx - ANCHO_TILE / 2, cy); // punta izquierda
+  ctx.closePath();
   ctx.fillStyle = color;
-  ctx.fillRect(
-    celda.c * TAMANO_CELDA,
-    celda.f * TAMANO_CELDA,
-    TAMANO_CELDA,
-    TAMANO_CELDA
-  );
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.15)";
+  ctx.stroke();
 }
 
-function pintarLaberinto(ctx, laberinto, entrada, salida, personajeX, personajeY) {
-  // 1. Paredes y caminos
+// Dibuja un "cubo" (pared con altura): tejado + dos caras laterales
+function pintarBloque(ctx, cx, cy, colorTejado, colorIzq, colorDer) {
+  const top = cy - ALTO_TILE / 2;
+  const right = cx + ANCHO_TILE / 2;
+  const bottom = cy + ALTO_TILE / 2;
+  const left = cx - ANCHO_TILE / 2;
+
+  // Cara izquierda (del punto izquierdo y abajo, hacia arriba ALTURA_PARED)
+  ctx.beginPath();
+  ctx.moveTo(left, cy);
+  ctx.lineTo(cx, bottom);
+  ctx.lineTo(cx, bottom - ALTURA_PARED);
+  ctx.lineTo(left, cy - ALTURA_PARED);
+  ctx.closePath();
+  ctx.fillStyle = colorIzq;
+  ctx.fill();
+
+  // Cara derecha
+  ctx.beginPath();
+  ctx.moveTo(right, cy);
+  ctx.lineTo(cx, bottom);
+  ctx.lineTo(cx, bottom - ALTURA_PARED);
+  ctx.lineTo(right, cy - ALTURA_PARED);
+  ctx.closePath();
+  ctx.fillStyle = colorDer;
+  ctx.fill();
+
+  // Tejado (el rombo, desplazado hacia arriba)
+  pintarSuelo(ctx, cx, cy - ALTURA_PARED, colorTejado);
+}
+
+function pintarLaberinto(ctx, laberinto, entrada, salida, offsetX, offsetY, personajeX, personajeY) {
+  // Pintamos en orden de "fila + columna" (de fondo hacia delante), para que
+  // los bloques más cercanos a la cámara se dibujen ENCIMA de los lejanos.
+  const celdas = [];
   for (let f = 0; f < laberinto.length; f++) {
     for (let c = 0; c < laberinto[0].length; c++) {
-      ctx.fillStyle = laberinto[f][c] === 1
-        ? "hsla(197, 79%, 50%, 0.49)" // pared
-        : "#f4f4f4";                   // camino
-      ctx.fillRect(c * TAMANO_CELDA, f * TAMANO_CELDA, TAMANO_CELDA, TAMANO_CELDA);
+      celdas.push({ f, c });
+    }
+  }
+  celdas.sort((a, b) => (a.f + a.c) - (b.f + b.c));
+
+  for (const { f, c } of celdas) {
+    const { x, y } = celdaAIsometrico(f, c, offsetX, offsetY);
+
+    if (laberinto[f][c] === 1) {
+      pintarBloque(ctx, x, y, "hsl(197, 60%, 55%)", "hsl(197, 60%, 35%)", "hsl(197, 60%, 45%)");
+    } else {
+      const esEntrada = f === entrada.f && c === entrada.c;
+      const esSalida = f === salida.f && c === salida.c;
+      const color = (esEntrada || esSalida) ? COLOR_ENTRADA_SALIDA : "#f4f4f4";
+      pintarSuelo(ctx, x, y, color);
     }
   }
 
-  // 2. Entrada y salida en verde (antes del personaje, para que quede encima)
-  pintarCelda(ctx, entrada, COLOR_ENTRADA_SALIDA);
-  pintarCelda(ctx, salida, COLOR_ENTRADA_SALIDA);
-
-  // 3. Personaje
+  // Personaje (ya viene en coordenadas de pantalla, calculado fuera)
   ctx.beginPath();
-  ctx.arc(personajeX, personajeY, TAMANO_CELDA / 2.5, 0, Math.PI * 2);
+  ctx.arc(personajeX, personajeY - ALTO_TILE / 2, ANCHO_TILE / 5, 0, Math.PI * 2);
   ctx.fillStyle = "#e63946";
   ctx.fill();
   ctx.lineWidth = 2;
@@ -164,12 +195,20 @@ if (!canvas) {
     "esté al final del <body> (o tenga el atributo defer)."
   );
 }
-canvas.width = laberinto[0].length * TAMANO_CELDA;
-canvas.height = laberinto.length * TAMANO_CELDA;
+
+// El laberinto isométrico ocupa más ancho que alto en pantalla; calculamos
+// un tamaño de canvas que le quepa entero, y un offset para centrarlo.
+const filas = laberinto.length;
+const columnas = laberinto[0].length;
+canvas.width = (filas + columnas) * (ANCHO_TILE / 2) + 40;
+canvas.height = (filas + columnas) * (ALTO_TILE / 2) + ALTURA_PARED + 40;
 const ctx = canvas.getContext("2d");
 
-// Posiciones actuales y objetivo en píxeles
-const inicio = centroCelda(personaje.f, personaje.c);
+const offsetX = canvas.width / 2;
+const offsetY = 30;
+
+// Posiciones actuales y objetivo en píxeles (coordenadas de pantalla isométricas)
+const inicio = celdaAIsometrico(personaje.f, personaje.c, offsetX, offsetY);
 let posActualX = inicio.x;
 let posActualY = inicio.y;
 let posObjetivoX = posActualX;
@@ -181,14 +220,8 @@ if (DEBUG) console.log("entrada:", entrada, "salida:", salida);
 // Control por teclado
 // --------------------------------------------------------------------------
 const MOVIMIENTOS = {
-  ArrowUp:    [-1, 0],
-  ArrowDown:  [1, 0],
-  ArrowLeft:  [0, -1],
-  ArrowRight: [0, 1],
-  KeyW:       [-1, 0],
-  KeyS:       [1, 0],
-  KeyA:       [0, -1],
-  KeyD:       [0, 1],
+  ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
+  KeyW: [-1, 0], KeyS: [1, 0], KeyA: [0, -1], KeyD: [0, 1],
 };
 
 document.addEventListener("keydown", (e) => {
@@ -200,7 +233,7 @@ document.addEventListener("keydown", (e) => {
   const [df, dc] = movimiento;
   personaje = moverPersonaje(laberinto, personaje, df, dc);
 
-  const destino = centroCelda(personaje.f, personaje.c);
+  const destino = celdaAIsometrico(personaje.f, personaje.c, offsetX, offsetY);
   posObjetivoX = destino.x;
   posObjetivoY = destino.y;
 
@@ -211,7 +244,6 @@ document.addEventListener("keydown", (e) => {
 // Bucle de animación
 // --------------------------------------------------------------------------
 const SUAVIZADO = 15;
-
 let ultimoTiempo = performance.now();
 
 function animar(ahora) {
@@ -222,7 +254,8 @@ function animar(ahora) {
   posActualX += (posObjetivoX - posActualX) * factor;
   posActualY += (posObjetivoY - posActualY) * factor;
 
-  pintarLaberinto(ctx, laberinto, entrada, salida, posActualX, posActualY);
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // ahora SÍ hace falta: los bloques no cubren todo el canvas
+  pintarLaberinto(ctx, laberinto, entrada, salida, offsetX, offsetY, posActualX, posActualY);
   requestAnimationFrame(animar);
 }
 
