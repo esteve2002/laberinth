@@ -18,22 +18,28 @@ body {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  /* Degradado romántico en vez de rojo plano */
   background: radial-gradient(circle at top, #ff8fa3 0%, #c9184a 65%, #800f2f 100%);
   font-family: "Loved by the King", cursive;
   color: #fff;
+  overflow-x: hidden;
+}
+
+/* Todo el contenido va POR ENCIMA de los corazones del fondo (z-index 0) */
+.title,
+.mensaje,
+.tablero,
+.firma {
+  position: relative;
+  z-index: 1;
 }
 
 .title {
   font-size: 2.6rem;
   margin: 0;
   text-align: center;
-  /* Sombra de texto para que se lea bien sobre el fondo y dé profundidad */
   text-shadow: 2px 3px 6px rgba(0, 0, 0, 0.4);
 }
 
-/* "by Esteve Riba" — añade este <p> debajo del canvas en tu HTML:
-   <p class="firma">by Esteve Riba</p> */
 .firma {
   font-family: "Loved by the King", cursive;
   font-style: italic;
@@ -43,15 +49,10 @@ body {
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.35);
 }
 
-/* Tarjeta que envuelve el canvas — añade este <div> alrededor del <canvas>:
-   <div class="tablero"><canvas id="laberinto"></canvas></div>
-   Así el marco rosa y la sombra quedan bien "cuadrados" alrededor del laberinto,
-   en vez de que el propio canvas cargue con el fondo y el borde. */
 .tablero {
   padding: 28px;
   border-radius: 28px;
   background: linear-gradient(135deg, var(--rosa-suave), var(--rosa-fuerte));
-  /* Sombra exterior para profundidad + borde interior sutil, como una tarjeta pulida */
   box-shadow:
     0 18px 40px rgba(0, 0, 0, 0.35),
     0 4px 10px rgba(0, 0, 0, 0.25),
@@ -61,4 +62,60 @@ body {
 #laberinto {
   display: block;
   border-radius: 16px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Mensajes románticos                                                  */
+/* ------------------------------------------------------------------ */
+.mensaje {
+  margin: 0;
+  min-height: 2.4rem; /* reserva el hueco para que la página no "salte" al aparecer el texto */
+  padding: 0 16px;
+  font-size: 1.7rem;
+  text-align: center;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+}
+
+/* Aparece, se queda unos segundos y se desvanece */
+.mensaje.visible {
+  animation: aparecer 4.5s ease both;
+}
+
+/* El mensaje final aparece y se queda */
+.mensaje.visible.fijo {
+  animation: aparecerFijo 1.2s ease both;
+  font-size: 2rem;
+}
+
+@keyframes aparecer {
+  0%   { opacity: 0; transform: translateY(10px); }
+  12%  { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes aparecerFijo {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Corazones flotando por el fondo                                      */
+/* ------------------------------------------------------------------ */
+.corazon-flotante {
+  position: fixed;
+  bottom: -60px;
+  z-index: 0;
+  pointer-events: none; /* no estorban al hacer clic */
+  user-select: none;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  /* "both": mientras espera su turno (animation-delay) se queda invisible */
+  animation: subir linear both;
+}
+
+@keyframes subir {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.9; }
+  100% { transform: translateY(-115vh) rotate(25deg); opacity: 0; }
 }
