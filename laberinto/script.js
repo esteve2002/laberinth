@@ -1,7 +1,9 @@
 const LEVELS = [
   { rows: 9, cols: 9, cards: 3 },
-  { rows: 13, cols: 13, cards: 4 },
-  { rows: 17, cols: 17, cards: 5 },
+  { rows: 11, cols: 11, cards: 4 },
+  { rows: 13, cols: 13, cards: 5 },
+  { rows: 15, cols: 15, cards: 6 },
+  { rows: 17, cols: 17, cards: 7 },
 ];
 
 const MOVE_KEYS = {
@@ -15,37 +17,59 @@ const MOVE_KEYS = {
   KeyD: { row: 0, col: 1 },
 };
 
+const CARD_TEXTS = [
+  "Cada paso me acerca a ti, y cada vuelta del camino me recuerda lo que siento.",
+  "No importa cuántas esquinas tenga el destino: yo seguiría buscando tu mano.",
+  "Si el laberinto se vuelve complicado, recuerda que lo más bello siempre vale la espera.",
+  "Te he encontrado en el centro de mi mundo y aún así sigo avanzando hacia ti.",
+  "El corazón sabe el camino, aunque la vista se pierda un momento.",
+  "Una nota pequeña, pero suficiente para recordar que el amor siempre guía.",
+  "No hace falta ver el final para saber que esta historia merece la pena.",
+  "Aunque el camino sea largo, si te tengo en mente todo vale la pena."
+];
+
+const BAD_CARD_TEXTS = [
+  "La duda se mete en el camino y te hace perder la partida.",
+  "Tomaste el camino equivocado y la tristeza se cerró sobre ti.",
+  "La incertidumbre te ha atrapado; el laberinto gana esta vez.",
+  "La tormenta del miedo bloquea el camino y te hace perder el pulso."
+];
+
 const canvas = document.getElementById("laberinto");
-const messageEl = document.getElementById("mensaje");
-const nivelEl = document.getElementById("nivelActual");
-const cartasEl = document.getElementById("cartasRestantes");
-const estadoEl = document.getElementById("estadoPartida");
-const modal = document.getElementById("cardModal");
-const modalKicker = document.getElementById("cardKicker");
-const modalTitle = document.getElementById("cardTitle");
-const modalText = document.getElementById("cardText");
-const modalAction = document.getElementById("cardAction");
-
-if (!canvas || !messageEl || !nivelEl || !cartasEl || !estadoEl || !modal || !modalKicker || !modalTitle || !modalText || !modalAction) {
-  throw new Error("Faltan elementos del DOM del laberinto.");
-}
-
 const ctx = canvas.getContext("2d");
-if (!ctx) {
-  throw new Error("No se pudo inicializar el canvas.");
-}
+const nivelEl = document.getElementById("nivelActual");
+const cartasEl = document.getElementById("cartasActuales");
+const estadoEl = document.getElementById("estadoPartida");
+const mensajeEl = document.getElementById("mensajeBanner");
+const overlay = document.getElementById("screenOverlay");
+const overlayKicker = document.getElementById("overlayKicker");
+const overlayTitle = document.getElementById("overlayTitle");
+const overlayText = document.getElementById("overlayText");
+const overlayButton = document.getElementById("overlayButton");
+const cardModal = document.getElementById("cardModal");
+const cardKicker = document.getElementById("cardKicker");
+const cardTitle = document.getElementById("cardTitle");
+const cardText = document.getElementById("cardText");
+const cardAction = document.getElementById("cardAction");
+const touchButtons = [...document.querySelectorAll(".touch-btn")];
 
 const state = {
+  screen: "start",
   levelIndex: 0,
-  gameState: "playing",
   maze: [],
   player: { row: 1, col: 1 },
   exit: { row: 1, col: 1 },
   cards: [],
-  tile: 26,
+  cardsFound: 0,
+  totalCardsFound: 0,
+  tile: 30,
   offsetX: 0,
   offsetY: 0,
-  modalType: null,
+  startedAt: 0,
+  elapsedMs: 0,
+  overlayAction: null,
+  lastMessage: "",
+  modalAction: null,
   hintCell: null,
   hintUntil: 0,
 };
@@ -54,22 +78,71 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function showMessage(text, fixed = false) {
-  messageEl.textContent = text;
-  messageEl.classList.remove("visible", "fijo");
-  void messageEl.offsetWidth;
-  messageEl.classList.add("visible");
-  if (fixed) messageEl.classList.add("fijo");
+function showBanner(text) {
+  state.lastMessage = text;
+  mensajeEl.textContent = text;
 }
 
 function updateHud() {
   nivelEl.textContent = String(state.levelIndex + 1);
-  cartasEl.textContent = String(state.cards.filter((card) => !card.opened).length);
-  const label = state.gameState === "playing" ? "Explorando" : state.gameState === "won" ? "Victoria" : state.gameState === "lost" ? "Derrota" : "Subiendo";
-  estadoEl.textContent = label;
+  cartasEl.textContent = String(state.cardsFound);
+
+  if (state.screen === "start") {
+    estadoEl.textContent = "Inicio";
+  } else if (state.screen === "playing") {
+    estadoEl.textContent = "Explorando";
+  } else if (state.screen === "between") {
+    estadoEl.textContent = "Siguiente";
+  } else if (state.screen === "paused") {
+    estadoEl.textContent = "Pausa";
+  } else if (state.screen === "final") {
+    estadoEl.textContent = "Final";
+  } else if (state.screen === "card") {
+    estadoEl.textContent = "Carta";
+  }
 }
 
-function distanceMap(maze, start) {
+function getRandomItem(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function buildOverlay({ kicker, title, text, buttonText, action }) {
+  overlayKicker.textContent = kicker;
+  overlayTitle.textContent = title;
+  overlayText.textContent = text;
+  overlayButton.textContent = buttonText;
+  state.overlayAction = action;
+  overlay.classList.add("visible");
+}
+
+function hideOverlay() {
+  overlay.classList.remove("visible");
+  state.overlayAction = null;
+}
+
+function openCardModal({ kicker, title, text, buttonText, action, variant = "good" }) {
+  cardKicker.textContent = kicker;
+  cardTitle.textContent = title;
+  cardText.textContent = text;
+  cardAction.textContent = buttonText;
+  state.modalAction = action;
+  cardModal.classList.add("visible");
+  cardModal.dataset.variant = variant;
+}
+
+function closeCardModal() {
+  cardModal.classList.remove("visible");
+  state.modalAction = null;
+}
+
+function timeString(ms) {
+  const secs = Math.floor(ms / 1000);
+  const minutes = Math.floor(secs / 60);
+  const remaining = secs % 60;
+  return `${minutes}:${String(remaining).padStart(2, "0")}`;
+}
+
+function bfsDistances(maze, start) {
   const distances = Array.from({ length: maze.length }, () => Array(maze[0].length).fill(-1));
   const queue = [start];
   distances[start.row][start.col] = 0;
@@ -78,11 +151,19 @@ function distanceMap(maze, start) {
   while (index < queue.length) {
     const current = queue[index++];
     const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
     for (const [dr, dc] of dirs) {
       const nextRow = current.row + dr;
       const nextCol = current.col + dc;
-      if (nextRow < 0 || nextRow >= maze.length || nextCol < 0 || nextCol >= maze[0].length) continue;
-      if (maze[nextRow][nextCol] !== 0 || distances[nextRow][nextCol] !== -1) continue;
+
+      if (nextRow < 0 || nextRow >= maze.length || nextCol < 0 || nextCol >= maze[0].length) {
+        continue;
+      }
+
+      if (maze[nextRow][nextCol] !== 0 || distances[nextRow][nextCol] !== -1) {
+        continue;
+      }
+
       distances[nextRow][nextCol] = distances[current.row][current.col] + 1;
       queue.push({ row: nextRow, col: nextCol });
     }
@@ -98,16 +179,22 @@ function generateMaze(rows, cols) {
 
   function carve(row, col) {
     maze[row][col] = 0;
-    const dirs = [[-2, 0], [2, 0], [0, -2], [0, 2]];
-    for (let i = dirs.length - 1; i >= 0; i--) {
+    const directions = [[-2, 0], [2, 0], [0, -2], [0, 2]];
+
+    for (let i = directions.length - 1; i >= 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+      [directions[i], directions[j]] = [directions[j], directions[i]];
     }
 
-    for (const [dr, dc] of dirs) {
+    for (const [dr, dc] of directions) {
       const nextRow = row + dr;
       const nextCol = col + dc;
-      if (nextRow > 0 && nextRow < mazeRows - 1 && nextCol > 0 && nextCol < mazeCols - 1 && maze[nextRow][nextCol] === 1) {
+
+      if (
+        nextRow > 0 && nextRow < mazeRows - 1 &&
+        nextCol > 0 && nextCol < mazeCols - 1 &&
+        maze[nextRow][nextCol] === 1
+      ) {
         maze[row + dr / 2][col + dc / 2] = 0;
         carve(nextRow, nextCol);
       }
@@ -118,8 +205,8 @@ function generateMaze(rows, cols) {
   return maze;
 }
 
-function findExit(maze, start) {
-  const distances = distanceMap(maze, start);
+function findFarthestCell(maze, start) {
+  const distances = bfsDistances(maze, start);
   let best = { row: start.row, col: start.col };
   let maxDistance = -1;
 
@@ -135,26 +222,37 @@ function findExit(maze, start) {
   return best;
 }
 
-function reconstructPath(maze, start, goal) {
-  const distances = distanceMap(maze, goal);
+function buildShortestPath(maze, start, goal) {
+  const distances = bfsDistances(maze, goal);
   const path = [start];
-  let current = start;
+  let current = { ...start };
 
   while (current.row !== goal.row || current.col !== goal.col) {
     const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     let next = null;
+
     for (const [dr, dc] of dirs) {
       const nextRow = current.row + dr;
       const nextCol = current.col + dc;
-      if (nextRow < 0 || nextRow >= maze.length || nextCol < 0 || nextCol >= maze[0].length) continue;
-      if (maze[nextRow][nextCol] !== 0) continue;
-      if (distances[nextRow][nextCol] === -1) continue;
-      if (distances[nextRow][nextCol] < distances[current.row][current.col]) {
-        next = { row: nextRow, col: nextCol };
-        break;
+
+      if (
+        nextRow < 0 || nextRow >= maze.length ||
+        nextCol < 0 || nextCol >= maze[0].length ||
+        maze[nextRow][nextCol] !== 0 ||
+        distances[nextRow][nextCol] === -1 ||
+        distances[nextRow][nextCol] >= distances[current.row][current.col]
+      ) {
+        continue;
       }
+
+      next = { row: nextRow, col: nextCol };
+      break;
     }
-    if (!next) break;
+
+    if (!next) {
+      break;
+    }
+
     path.push(next);
     current = next;
   }
@@ -162,187 +260,212 @@ function reconstructPath(maze, start, goal) {
   return path;
 }
 
-function chooseCards(path, count) {
-  const valid = path.filter((cell, index) => index > 0 && index < path.length - 1);
-  const result = [];
+function placeCardsOnPath(path, count) {
+  const validCells = path.filter((cell, index) => index > 0 && index < path.length - 1);
+  const chosen = [];
   const seen = new Set();
 
-  while (result.length < Math.min(count, valid.length) && valid.length > 0) {
-    const pick = valid[Math.floor(Math.random() * valid.length)];
-    const key = `${pick.row}-${pick.col}`;
+  while (chosen.length < Math.min(count, validCells.length) && validCells.length > 0) {
+    const cell = validCells[Math.floor(Math.random() * validCells.length)];
+    const key = `${cell.row}-${cell.col}`;
+
     if (!seen.has(key)) {
       seen.add(key);
-      result.push({ row: pick.row, col: pick.col, opened: false, kind: result.length % 2 === 0 ? "good" : "bad" });
+      chosen.push({
+        row: cell.row,
+        col: cell.col,
+        opened: false,
+        type: chosen.length % 2 === 0 ? "good" : "bad",
+      });
     }
   }
 
-  return result;
+  return chosen;
 }
 
-function findCard(row, col) {
+function findCardAt(row, col) {
   return state.cards.find((card) => !card.opened && card.row === row && card.col === col);
 }
 
-function openModal(type, title, text, buttonText) {
-  state.modalType = type;
-  modal.classList.remove("good", "bad");
-  modal.classList.add(type === "good" ? "good" : "bad");
-  modalKicker.textContent = type === "good" ? "Carta revelada" : "Carta maldita";
-  modalTitle.textContent = title;
-  modalText.textContent = text;
-  modalAction.textContent = buttonText;
-  modal.classList.add("visible");
-}
-
-function closeModal() {
-  state.modalType = null;
-  modal.classList.remove("visible", "good", "bad");
-}
-
-function getHintFromCell(row, col) {
-  const distances = distanceMap(state.maze, state.exit);
-  const current = distances[row][col];
-  if (current <= 0) return null;
-  const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-  for (const [dr, dc] of dirs) {
-    const nextRow = row + dr;
-    const nextCol = col + dc;
-    if (nextRow < 0 || nextRow >= state.maze.length || nextCol < 0 || nextCol >= state.maze[0].length) continue;
-    if (state.maze[nextRow][nextCol] !== 0) continue;
-    if (distances[nextRow][nextCol] === current - 1) {
-      const direction = dr === -1 ? "arriba" : dr === 1 ? "abajo" : dc === -1 ? "izquierda" : "derecha";
-      return { row: nextRow, col: nextCol, direction };
-    }
-  }
-
-  return null;
-}
-
 function startLevel(index) {
-  state.levelIndex = index;
-  state.gameState = "playing";
-  state.hintCell = null;
-  state.hintUntil = 0;
-
   const config = LEVELS[index];
   const maze = generateMaze(config.rows, config.cols);
   const start = { row: 1, col: 1 };
-  const exit = findExit(maze, start);
-  const path = reconstructPath(maze, start, exit);
-  const cards = chooseCards(path, config.cards);
+  const exit = findFarthestCell(maze, start);
+  const path = buildShortestPath(maze, start, exit);
 
+  state.levelIndex = index;
+  state.screen = "playing";
   state.maze = maze;
   state.player = { ...start };
   state.exit = exit;
-  state.cards = cards;
+  state.cards = placeCardsOnPath(path, config.cards);
+  state.hintCell = null;
+  state.hintUntil = 0;
+  state.startedAt = performance.now() - state.elapsedMs;
 
+  hideOverlay();
+  showBanner(index === 0 ? "Busca la salida y abre las cartas con cuidado." : `Nivel ${index + 1}: el camino se vuelve más largo.`);
   resizeCanvas();
   updateHud();
-  showMessage(index === 0 ? "Busca la salida y usa tus cartas con cuidado." : `Nivel ${index + 1}: el mapa crece y se vuelve más peligroso.`, true);
 }
 
-function nextLevel() {
-  if (state.levelIndex >= LEVELS.length - 1) {
-    state.gameState = "won";
-    updateHud();
-    showMessage("¡Lo has superado todo!", true);
-    openModal("good", "Victoria final", "Has terminado todos los niveles del laberinto.", "Reiniciar");
-    return;
-  }
-
-  state.gameState = "next";
-  updateHud();
-  showMessage("Nivel superado. El mapa crece.", true);
-  setTimeout(() => startLevel(state.levelIndex + 1), 700);
-}
-
-function loseGame() {
-  state.gameState = "lost";
-  updateHud();
-  showMessage("Carta maldita: pierdes la partida.", true);
-  openModal("bad", "Carta maldita", "Has abierto una carta que te ha condenado a perder la partida.", "Reiniciar");
-}
-
-function restartGame() {
-  closeModal();
+function beginGame() {
+  state.screen = "playing";
+  state.cardsFound = 0;
+  state.totalCardsFound = 0;
+  state.elapsedMs = 0;
   startLevel(0);
 }
 
+function showFinalScreen() {
+  const totalTime = timeString(state.elapsedMs);
+  const totalCards = state.totalCardsFound;
+
+  state.screen = "final";
+  buildOverlay({
+    kicker: "Final",
+    title: "Has llegado al final",
+    text: `Cartas recogidas: ${totalCards}. Tiempo total: ${totalTime}.`,
+    buttonText: "Jugar de nuevo",
+    action: () => beginGame(),
+  });
+  updateHud();
+}
+
+function handleWinLevel() {
+  if (state.levelIndex >= LEVELS.length - 1) {
+    showFinalScreen();
+    return;
+  }
+
+  state.screen = "between";
+  buildOverlay({
+    kicker: `Nivel ${state.levelIndex + 1}`,
+    title: "¡Has encontrado la salida!",
+    text: `Prepárate para el siguiente laberinto, más grande y más difícil.`,
+    buttonText: "Siguiente nivel",
+    action: () => startLevel(state.levelIndex + 1),
+  });
+  updateHud();
+}
+
+function togglePause() {
+  if (state.screen !== "playing") {
+    return;
+  }
+
+  state.screen = "paused";
+  buildOverlay({
+    kicker: "Pausa",
+    title: "Juego pausado",
+    text: "Toma aire. Cuando estés listo, vuelve al laberinto.",
+    buttonText: "Continuar",
+    action: () => {
+      state.screen = "playing";
+      hideOverlay();
+      updateHud();
+    },
+  });
+  updateHud();
+}
+
+function badCardOutcome() {
+  state.screen = "card";
+  openCardModal({
+    kicker: "Carta oscura",
+    title: "La duda te atrapó",
+    text: getRandomItem(BAD_CARD_TEXTS),
+    buttonText: "Reiniciar",
+    action: () => {
+      closeCardModal();
+      beginGame();
+    },
+    variant: "bad",
+  });
+}
+
 function openCard() {
-  if (state.gameState !== "playing" || state.modalType) return;
-  const card = findCard(state.player.row, state.player.col);
-  if (!card) return;
+  if (state.screen !== "playing") {
+    return;
+  }
+
+  const card = findCardAt(state.player.row, state.player.col);
+  if (!card) {
+    showBanner("Aquí no hay una carta. Sigue avanzando.");
+    return;
+  }
 
   card.opened = true;
+  state.cardsFound += 1;
+  state.totalCardsFound += 1;
   updateHud();
 
-  if (card.kind === "bad") {
-    loseGame();
+  if (card.type === "bad") {
+    badCardOutcome();
     return;
   }
 
-  const hint = getHintFromCell(card.row, card.col);
-  if (hint) {
-    state.hintCell = { row: hint.row, col: hint.col };
-    state.hintUntil = performance.now() + 4500;
-    showMessage(`Pista: la salida está más ${hint.direction}.`, true);
-    openModal("good", "Pista brillante", `La salida está más ${hint.direction}. Sigue ese camino.`, "Continuar");
-    return;
-  }
+  const message = getRandomItem(CARD_TEXTS);
+  state.hintCell = { row: state.exit.row, col: state.exit.col };
+  state.hintUntil = performance.now() + 4400;
+  state.screen = "card";
 
-  showMessage("La carta no da una pista clara, pero el camino sigue vivo.", true);
-  openModal("good", "Carta útil", "La carta no tenía una pista clara, pero aún puedes avanzar con confianza.", "Continuar");
+  openCardModal({
+    kicker: "Carta del corazón",
+    title: "Mensaje secreto",
+    text: message,
+    buttonText: "Cerrar",
+    action: () => {
+      closeCardModal();
+      state.screen = "playing";
+      updateHud();
+    },
+    variant: "good",
+  });
 }
 
 function movePlayer(dr, dc) {
-  if (state.gameState !== "playing" || state.modalType) return;
+  if (state.screen !== "playing") {
+    return;
+  }
 
   const nextRow = state.player.row + dr;
   const nextCol = state.player.col + dc;
-  if (nextRow < 0 || nextRow >= state.maze.length || nextCol < 0 || nextCol >= state.maze[0].length) return;
-  if (state.maze[nextRow][nextCol] !== 0) return;
+
+  if (
+    nextRow < 0 || nextRow >= state.maze.length ||
+    nextCol < 0 || nextCol >= state.maze[0].length ||
+    state.maze[nextRow][nextCol] !== 0
+  ) {
+    return;
+  }
 
   state.player.row = nextRow;
   state.player.col = nextCol;
 
-  const card = findCard(state.player.row, state.player.col);
-  if (card) {
-    showMessage("Hay una carta aquí. Pulsa Enter o Espacio para abrirla.", false);
+  const nearbyCard = findCardAt(state.player.row, state.player.col);
+  if (nearbyCard) {
+    showBanner("Has encontrado una carta. Pulsa Enter o Espacio para abrirla.");
   }
 
   if (state.player.row === state.exit.row && state.player.col === state.exit.col) {
-    nextLevel();
+    handleWinLevel();
   }
 }
 
-function resizeCanvas() {
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(rect.width * dpr);
-  canvas.height = Math.round(rect.height * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  const rows = state.maze.length;
-  const cols = state.maze[0].length;
-  const padding = 18;
-  state.tile = clamp(Math.min((rect.width - padding * 2) / cols, (rect.height - padding * 2) / rows), 22, 44);
-  state.offsetX = Math.round((rect.width - cols * state.tile) / 2);
-  state.offsetY = Math.round((rect.height - rows * state.tile) / 2);
-}
-
-function roundedRectPath(x, y, w, h, r) {
-  const radius = Math.min(r, w / 2, h / 2);
+function roundedRectPath(x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
   ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + w - radius, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-  ctx.lineTo(x + w, y + h - radius);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-  ctx.lineTo(x + radius, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.closePath();
 }
 
@@ -357,62 +480,65 @@ function drawCell(row, col, time) {
   ctx.save();
 
   if (isWall) {
-    const wallGrad = ctx.createLinearGradient(x, y, x + state.tile, y + state.tile);
-    wallGrad.addColorStop(0, "#291837");
-    wallGrad.addColorStop(1, "#120c1b");
-    ctx.fillStyle = wallGrad;
-    roundedRectPath(x + 2, y + 2, state.tile - 4, state.tile - 4, 10);
+    const gradient = ctx.createLinearGradient(x, y, x + state.tile, y + state.tile);
+    gradient.addColorStop(0, "#35203d");
+    gradient.addColorStop(0.5, "#1d1224");
+    gradient.addColorStop(1, "#120c1b");
+    ctx.fillStyle = gradient;
+    roundedRectPath(x + 2, y + 2, state.tile - 4, state.tile - 4, 11);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
     ctx.stroke();
   } else {
-    const floorGrad = ctx.createLinearGradient(x, y, x + state.tile, y + state.tile);
-    floorGrad.addColorStop(0, "#fff7fb");
-    floorGrad.addColorStop(1, "#f7d8e4");
-    ctx.fillStyle = floorGrad;
+    const gradient = ctx.createLinearGradient(x, y, x + state.tile, y + state.tile);
+    gradient.addColorStop(0, "#fff9fb");
+    gradient.addColorStop(0.5, "#f8dfe7");
+    gradient.addColorStop(1, "#f3c4d6");
+    ctx.fillStyle = gradient;
     roundedRectPath(x + 2, y + 2, state.tile - 4, state.tile - 4, 10);
     ctx.fill();
-    ctx.strokeStyle = "rgba(122, 26, 58, 0.12)";
+    ctx.strokeStyle = "rgba(129, 49, 77, 0.12)";
     ctx.stroke();
   }
 
   if (isExit) {
     ctx.save();
-    const pulse = 1 + Math.sin(time * 0.006) * 0.12;
+    const pulse = 1 + Math.sin(time * 0.006) * 0.16;
     ctx.translate(x + state.tile / 2, y + state.tile / 2);
-    ctx.strokeStyle = "rgba(251, 191, 36, 0.9)";
-    ctx.shadowColor = "rgba(251, 191, 36, 0.8)";
+    ctx.lineWidth = 2.3;
+    ctx.shadowColor = "rgba(246, 211, 101, 0.9)";
     ctx.shadowBlur = 18;
-    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = "rgba(246, 211, 101, 1)";
     ctx.beginPath();
-    ctx.arc(0, 0, state.tile * 0.22 * pulse, 0, Math.PI * 2);
+    ctx.arc(0, 0, state.tile * 0.2 * pulse, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
 
   if (isCard) {
+    const size = state.tile * 0.22;
     const cx = x + state.tile / 2;
     const cy = y + state.tile / 2;
-    const size = state.tile * 0.24;
+
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(Math.sin(time * 0.004 + row + col) * 0.18);
-    ctx.shadowColor = "rgba(255, 77, 109, 0.45)";
-    ctx.shadowBlur = 12;
+    ctx.rotate(Math.sin(time * 0.006 + row + col) * 0.14);
+    ctx.shadowColor = "rgba(255, 77, 109, 0.7)";
+    ctx.shadowBlur = 16;
     ctx.fillStyle = "#ff4d6d";
-    roundedRectPath(-size, -size * 1.08, size * 2, size * 2.16, 9);
+    roundedRectPath(-size, -size * 1.15, size * 2, size * 2.3, 8);
     ctx.fill();
     ctx.fillStyle = "#fff";
-    ctx.fillRect(-size * 0.25, -size * 0.7, size * 0.5, size * 1.4);
-    ctx.fillRect(-size * 0.7, -size * 0.1, size * 1.4, size * 0.26);
+    ctx.fillRect(-size * 0.25, -size * 0.7, size * 0.5, size * 1.42);
+    ctx.fillRect(-size * 0.72, -size * 0.08, size * 1.44, size * 0.22);
     ctx.restore();
   }
 
-  if (isHint) {
+  if (isHint && time < state.hintUntil) {
     ctx.save();
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = "rgba(98, 210, 177, 0.9)";
     ctx.lineWidth = 2;
-    ctx.setLineDash([5, 6]);
-    ctx.strokeStyle = "rgba(52, 211, 153, 0.9)";
     roundedRectPath(x + 5, y + 5, state.tile - 10, state.tile - 10, 8);
     ctx.stroke();
     ctx.restore();
@@ -422,25 +548,34 @@ function drawCell(row, col, time) {
 }
 
 function drawPlayer(time) {
-  const x = state.offsetX + state.player.col * state.tile + state.tile / 2;
-  const y = state.offsetY + state.player.row * state.tile + state.tile / 2;
-  const bob = Math.sin(time * 0.008) * 2;
+  const cx = state.offsetX + state.player.col * state.tile + state.tile / 2;
+  const cy = state.offsetY + state.player.row * state.tile + state.tile / 2;
+  const bob = Math.sin(time * 0.009) * 2;
 
   ctx.save();
-  const glow = ctx.createRadialGradient(x, y, 6, x, y, state.tile * 1.8);
-  glow.addColorStop(0, "rgba(255, 77, 109, 0.92)");
-  glow.addColorStop(0.3, "rgba(255, 77, 109, 0.35)");
+  const glow = ctx.createRadialGradient(cx, cy, 6, cx, cy, state.tile * 1.6);
+  glow.addColorStop(0, "rgba(255, 77, 109, 0.9)");
+  glow.addColorStop(0.25, "rgba(255, 77, 109, 0.33)");
   glow.addColorStop(1, "rgba(255, 77, 109, 0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(x, y, state.tile * 1.2, 0, Math.PI * 2);
+  ctx.arc(cx, cy, state.tile * 1.1, 0, Math.PI * 2);
   ctx.fill();
 
+  ctx.translate(cx, cy + bob);
   ctx.fillStyle = "#ff4d6d";
-  ctx.shadowColor = "rgba(255, 77, 109, 0.75)";
+  ctx.shadowColor = "rgba(255, 77, 109, 0.8)";
   ctx.shadowBlur = 18;
   ctx.beginPath();
-  ctx.arc(x, y + bob, state.tile * 0.24, 0, Math.PI * 2);
+  ctx.moveTo(0, state.tile * 0.1);
+  ctx.bezierCurveTo(state.tile * 0.25, -state.tile * 0.18, state.tile * 0.48, -state.tile * 0.1, 0, state.tile * 0.25);
+  ctx.bezierCurveTo(-state.tile * 0.48, -state.tile * 0.1, -state.tile * 0.25, -state.tile * 0.18, 0, state.tile * 0.1);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.beginPath();
+  ctx.arc(-state.tile * 0.12, -state.tile * 0.04, state.tile * 0.05, 0, Math.PI * 2);
+  ctx.arc(state.tile * 0.12, -state.tile * 0.04, state.tile * 0.05, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -450,16 +585,16 @@ function drawBoard(time) {
   const height = canvas.clientHeight;
   ctx.clearRect(0, 0, width, height);
 
-  const bg = ctx.createLinearGradient(0, 0, 0, height);
-  bg.addColorStop(0, "#120b1d");
-  bg.addColorStop(1, "#090d17");
-  ctx.fillStyle = bg;
+  const background = ctx.createLinearGradient(0, 0, 0, height);
+  background.addColorStop(0, "#120b1d");
+  background.addColorStop(1, "#090d17");
+  ctx.fillStyle = background;
   ctx.fillRect(0, 0, width, height);
 
-  const orb = ctx.createRadialGradient(width * 0.52, height * 0.24, 0, width * 0.52, height * 0.24, Math.max(width, height) * 0.8);
-  orb.addColorStop(0, "rgba(255, 143, 163, 0.12)");
-  orb.addColorStop(1, "rgba(255, 143, 163, 0)");
-  ctx.fillStyle = orb;
+  const glow = ctx.createRadialGradient(width * 0.5, height * 0.45, 0, width * 0.5, height * 0.45, Math.max(width, height));
+  glow.addColorStop(0, "rgba(255, 143, 163, 0.15)");
+  glow.addColorStop(1, "rgba(255, 143, 163, 0)");
+  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
 
   for (let row = 0; row < state.maze.length; row++) {
@@ -471,45 +606,129 @@ function drawBoard(time) {
   drawPlayer(time);
 }
 
-function animate(now) {
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const rows = state.maze.length || 1;
+  const cols = state.maze[0]?.length || 1;
+  const padding = 18;
+
+  state.tile = clamp(Math.min((rect.width - padding * 2) / cols, (rect.height - padding * 2) / rows), 26, 44);
+  state.offsetX = Math.round((rect.width - cols * state.tile) / 2);
+  state.offsetY = Math.round((rect.height - rows * state.tile) / 2);
+}
+
+function loop(now) {
+  if (state.screen === "playing" || state.screen === "card") {
+    state.elapsedMs = now - state.startedAt;
+  }
+
   if (state.hintCell && now > state.hintUntil) {
     state.hintCell = null;
   }
+
   drawBoard(now);
-  requestAnimationFrame(animate);
+  requestAnimationFrame(loop);
 }
 
-function handleKeyDown(event) {
-  if (event.code === "Escape" && state.modalType) {
-    closeModal();
-    if (state.gameState === "lost" || state.gameState === "won") restartGame();
+function handleKeydown(event) {
+  if (event.code === "KeyP") {
+    togglePause();
+    return;
+  }
+
+  if (event.code === "Escape") {
+    if (cardModal.classList.contains("visible")) {
+      closeCardModal();
+      if (state.screen === "final") {
+        beginGame();
+      } else if (state.screen === "card") {
+        state.screen = "playing";
+        updateHud();
+      }
+      return;
+    }
+
+    if (overlay.classList.contains("visible") && state.screen !== "start") {
+      if (state.screen === "paused") {
+        state.screen = "playing";
+        hideOverlay();
+        updateHud();
+      }
+    }
     return;
   }
 
   if (event.code === "Enter" || event.code === "Space") {
     event.preventDefault();
-    if (state.modalType) {
-      closeModal();
-      if (state.gameState === "lost" || state.gameState === "won") restartGame();
+    if (cardModal.classList.contains("visible")) {
+      if (state.modalAction) {
+        state.modalAction();
+      }
       return;
     }
     openCard();
     return;
   }
 
-  const move = MOVE_KEYS[event.code];
-  if (!move) return;
+  const movement = MOVE_KEYS[event.code];
+  if (!movement) {
+    return;
+  }
+
   event.preventDefault();
+  movePlayer(movement.row, movement.col);
+}
+
+function handleTouchMove(direction) {
+  const map = {
+    up: { row: -1, col: 0 },
+    down: { row: 1, col: 0 },
+    left: { row: 0, col: -1 },
+    right: { row: 0, col: 1 },
+  };
+
+  const move = map[direction];
+  if (!move) {
+    return;
+  }
+
   movePlayer(move.row, move.col);
 }
 
-modalAction.addEventListener("click", () => {
-  closeModal();
-  if (state.gameState === "lost" || state.gameState === "won") restartGame();
+overlayButton.addEventListener("click", () => {
+  if (state.overlayAction) {
+    state.overlayAction();
+  }
 });
 
-window.addEventListener("resize", resizeCanvas);
-document.addEventListener("keydown", handleKeyDown);
+cardAction.addEventListener("click", () => {
+  if (state.modalAction) {
+    state.modalAction();
+  }
+});
 
-startLevel(0);
-requestAnimationFrame(animate);
+touchButtons.forEach((button) => {
+  button.addEventListener("pointerdown", () => {
+    handleTouchMove(button.dataset.dir);
+  });
+});
+
+document.addEventListener("keydown", handleKeydown);
+window.addEventListener("resize", resizeCanvas);
+
+buildOverlay({
+  kicker: "Aventura",
+  title: "El laberinto del amor",
+  text: "Mueve con flechas, WASD o el pad táctil. Abre las cartas con Enter o Espacio y llega a la salida.",
+  buttonText: "Empezar",
+  action: () => beginGame(),
+});
+
+updateHud();
+resizeCanvas();
+requestAnimationFrame(loop);
