@@ -3,36 +3,41 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>El laberinto del amor</title>
+    <title>E & Z: Noche Encantada</title>
     <link rel="stylesheet" href="style.css" />
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Infant:wght@400;500;600;700&family=Loved+by+the+King&display=swap');
+      @import url("https://fonts.googleapis.com/css2?family=Cormorant+Infant:wght@400;500;600;700&family=Loved+by+the+King&display=swap");
     </style>
   </head>
   <body>
     <main class="app">
       <header class="hero">
-        <p class="eyebrow">Aventura romántica</p>
-        <h1 class="title">El laberinto del amor</h1>
+        <p class="eyebrow">Halloween encantado</p>
+        <h1 class="title">E & Z: Noche Encantada</h1>
       </header>
 
       <section class="stage">
         <div class="hud" aria-live="polite">
           <div class="hud-chip">Nivel <strong id="nivelActual">1</strong></div>
-          <div class="hud-chip">Cartas <strong id="cartasActuales">0</strong></div>
+          <div class="hud-chip"><span id="collectibleLabel">Calabazas</span> <strong id="collectibleCount">0</strong></div>
           <div class="hud-chip">Estado <strong id="estadoPartida">Inicio</strong></div>
         </div>
 
-        <p class="mensaje" id="mensajeBanner">Busca el corazón que te espera.</p>
+        <p id="mensajeBanner" class="mensaje">Cruza el mundo encantado de la E hasta la Z.</p>
 
         <div class="board-shell">
-          <canvas id="laberinto" aria-label="Laberinto del amor"></canvas>
+          <canvas id="laberinto" aria-label="Laberinto romántico de Halloween"></canvas>
 
           <div id="screenOverlay" class="screen-overlay visible" aria-live="polite">
             <div class="screen-panel">
               <p id="overlayKicker" class="panel-kicker">Aventura</p>
-              <h2 id="overlayTitle">El laberinto del amor</h2>
-              <p id="overlayText">Mueve con flechas, WASD o el pad táctil. Abre cartas con Enter o Espacio y llega a la salida.</p>
+              <h2 id="overlayTitle">E & Z: Noche Encantada</h2>
+              <p id="overlayText">
+                Mueve la E con flechas, WASD o cruceta táctil. Recolecta objetos del nivel y alcanza la Z brillante.
+              </p>
+              <div id="dedicationSlot" class="dedication-slot" aria-label="Espacio para dedicatoria">
+                Escribe aquí tu dedicatoria personal...
+              </div>
               <button id="overlayButton" class="panel-button" type="button">Empezar</button>
             </div>
           </div>
@@ -47,12 +52,12 @@
       </section>
     </main>
 
-    <div id="cardModal" class="card-modal" role="dialog" aria-modal="true" aria-labelledby="cardTitle">
+    <div id="collectibleModal" class="card-modal" role="dialog" aria-modal="true" aria-labelledby="collectibleTitle">
       <div class="card-shell">
-        <p id="cardKicker" class="card-kicker">Carta del camino</p>
-        <h3 id="cardTitle">Mensaje del corazón</h3>
-        <p id="cardText">Te acompaño por el camino.</p>
-        <button id="cardAction" class="card-button" type="button">Cerrar</button>
+        <p id="collectibleKicker" class="card-kicker">Recolectable</p>
+        <h3 id="collectibleTitle">Mensaje encantado</h3>
+        <p id="collectibleText">Contigo hasta los fantasmas se ponen románticos.</p>
+        <button id="collectibleAction" class="card-button" type="button">Cerrar</button>
       </div>
     </div>
 
