@@ -117,6 +117,34 @@ const LEVEL_THEMES = [
   },
 ];
 
+const QUESTIONS_BY_LEVEL = [
+  [
+    { prompt: "Tengo ojos y sonrisa, pero nunca puedo hablar. ¿Qué soy?", options: ["Una calabaza tallada", "Un búho", "Una luciérnaga"], answer: 0, hint: "Suele llevar una vela dentro." },
+    { prompt: "¿Qué pequeño ser ilumina los senderos del bosque?", options: ["Una luciérnaga", "Una bellota", "Una piedra"], answer: 0, hint: "Es un insecto que brilla por la noche." },
+    { prompt: "¿Qué estación trae hojas cobrizas y noches frescas?", options: ["Otoño", "Verano", "Primavera"], answer: 0, hint: "Es la estación de Halloween." },
+  ],
+  [
+    { prompt: "¿Qué guarda una ardilla para los meses fríos?", options: ["Bellotas", "Conchas", "Copos de nieve"], answer: 0, hint: "Es el fruto de algunos robles." },
+    { prompt: "¿Qué aparece a menudo en el suelo de un bosque otoñal?", options: ["Setas", "Corales", "Estrellas de mar"], answer: 0, hint: "Algunas tienen sombrero y pie." },
+    { prompt: "¿Qué animal puede trepar y saltar entre las ramas?", options: ["Una ardilla", "Un pulpo", "Un pingüino"], answer: 0, hint: "Tiene una cola grande y peluda." },
+  ],
+  [
+    { prompt: "¿Qué animal duerme a menudo colgado boca abajo?", options: ["El murciélago", "El gato", "La ardilla"], answer: 0, hint: "Tiene alas y sale al anochecer." },
+    { prompt: "¿Qué ilumina el cementerio encantado esta noche?", options: ["La luna", "Un semáforo", "El sol del mediodía"], answer: 0, hint: "Se ve en el cielo nocturno." },
+    { prompt: "¿Qué sonido anuncia que algo se mueve entre las tumbas?", options: ["Un susurro", "Una alarma de coche", "Un timbre escolar"], answer: 0, hint: "Es bajito y misterioso." },
+  ],
+  [
+    { prompt: "¿Qué objeto suele aparecer en los cuentos de brujas?", options: ["Una escoba", "Una raqueta", "Un paraguas de playa"], answer: 0, hint: "Sirve para barrer… y en los cuentos, volar." },
+    { prompt: "¿Qué animal acompaña a muchas brujas de los cuentos?", options: ["Un gato negro", "Un delfín", "Una jirafa"], answer: 0, hint: "Tiene bigotes y maúlla." },
+    { prompt: "¿Qué puede brillar en la ventana de una casa encantada?", options: ["Una vela", "Un cubito de hielo", "Una hoja seca"], answer: 0, hint: "Tiene una pequeña llama." },
+  ],
+  [
+    { prompt: "¿Qué guía a los viajeros en una noche despejada?", options: ["Las estrellas", "Las piedras", "Las hojas del suelo"], answer: 0, hint: "Son pequeños puntos de luz en el cielo." },
+    { prompt: "¿Cuál es el hechizo más bonito de esta aventura?", options: ["Cuidarnos y querernos", "Apagar todas las estrellas", "Caminar siempre a solas"], answer: 0, hint: "Es algo que se demuestra con cariño." },
+    { prompt: "Si la E quiere llegar hasta la Z, ¿qué debe hacer?", options: ["Seguir el camino", "Cerrar los ojos para siempre", "Olvidar el mapa"], answer: 0, hint: "Avanzar paso a paso funciona." },
+  ],
+];
+
 const canvas = document.getElementById("laberinto");
 const ctx = canvas?.getContext("2d");
 const nivelEl = document.getElementById("nivelActual");
@@ -135,9 +163,20 @@ const collectibleKicker = document.getElementById("collectibleKicker");
 const collectibleTitle = document.getElementById("collectibleTitle");
 const collectibleText = document.getElementById("collectibleText");
 const collectibleAction = document.getElementById("collectibleAction");
+const collectibleIconCanvas = document.getElementById("collectibleIcon");
 const touchButtons = [...document.querySelectorAll(".touch-btn")];
+const pauseButton = document.getElementById("pauseButton");
+const soundButton = document.getElementById("soundButton");
+const tiempoPartidaEl = document.getElementById("tiempoPartida");
+const questionModal = document.getElementById("questionModal");
+const questionKicker = document.getElementById("questionKicker");
+const questionTitle = document.getElementById("questionTitle");
+const questionText = document.getElementById("questionText");
+const questionChoices = document.getElementById("questionChoices");
+const questionFeedback = document.getElementById("questionFeedback");
+const jumpscareOverlay = document.getElementById("jumpscareOverlay");
 
-if (!canvas || !ctx || !nivelEl || !collectibleLabelEl || !collectibleCountEl || !estadoEl || !mensajeEl || !overlay || !overlayKicker || !overlayTitle || !overlayText || !overlayButton || !dedicationSlot || !collectibleModal || !collectibleKicker || !collectibleTitle || !collectibleText || !collectibleAction) {
+if (!canvas || !ctx || !nivelEl || !collectibleLabelEl || !collectibleCountEl || !estadoEl || !mensajeEl || !overlay || !overlayKicker || !overlayTitle || !overlayText || !overlayButton || !dedicationSlot || !collectibleModal || !collectibleKicker || !collectibleTitle || !collectibleText || !collectibleAction || !pauseButton || !soundButton || !tiempoPartidaEl || !questionModal || !questionKicker || !questionTitle || !questionText || !questionChoices || !questionFeedback || !jumpscareOverlay) {
   throw new Error("Faltan elementos del DOM para inicializar el juego.");
 }
 
@@ -148,6 +187,8 @@ const state = {
   player: { row: 1, col: 1 },
   exit: { row: 1, col: 1 },
   collectibles: [],
+  questionTiles: [],
+  pendingQuestion: null,
   levelCollected: 0,
   totalCollected: 0,
   totalTarget: LEVEL_THEMES.reduce((sum, level) => sum + level.collectibles, 0),
@@ -161,6 +202,9 @@ const state = {
   particles: [],
   transition: null,
   movePulseUntil: 0,
+  scareLevels: [],
+  scareTimeout: 0,
+  questionTimeout: 0,
 };
 
 function clamp(value, min, max) {
@@ -253,16 +297,13 @@ function findPath(maze, start, goal) {
 
 function placeCollectibles(path, count) {
   const valid = path.filter((_, i) => i > 1 && i < path.length - 1);
-  const used = new Set();
-  const items = [];
-  while (items.length < Math.min(count, valid.length)) {
-    const pick = valid[Math.floor(Math.random() * valid.length)];
-    const key = `${pick.row}-${pick.col}`;
-    if (used.has(key)) continue;
-    used.add(key);
-    items.push({ row: pick.row, col: pick.col, collected: false });
-  }
-  return items;
+  const shuffled = [...valid].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, shuffled.length)).map((cell) => ({
+    row: cell.row,
+    col: cell.col,
+    collected: false,
+    haunted: false,
+  }));
 }
 
 function formatTime(ms) {
@@ -272,6 +313,7 @@ function formatTime(ms) {
   return `${min}:${String(sec).padStart(2, "0")}`;
 }
 
+// block-2-marker
 // Continuación para insertar después de // block-2-marker.
 // Reutiliza constantes, elementos DOM y utilidades declaradas en la primera parte.
 
@@ -303,6 +345,312 @@ function roundedRect(context, x, y, width, height, radius) {
   context.arcTo(x, y + height, x, y, r);
   context.arcTo(x, y, x + width, y, r);
   context.closePath();
+}
+
+const AMBIENT_PRESETS = [
+  { chords: [110, 164.81, 220], melody: [329.63, 392, 440, 392], type: "sine" },
+  { chords: [146.83, 220, 293.66], melody: [392, 440, 523.25, 440], type: "triangle" },
+  { chords: [82.41, 123.47, 164.81], melody: [246.94, 293.66, 246.94, 185], type: "sine" },
+  { chords: [98, 146.83, 196], melody: [293.66, 349.23, 392, 349.23], type: "triangle" },
+  { chords: [130.81, 196, 261.63], melody: [523.25, 587.33, 659.25, 587.33], type: "sine" },
+];
+
+const audioState = {
+  context: null,
+  master: null,
+  voices: [],
+  melodyTimer: 0,
+  startTimeout: 0,
+  melodyIndex: 0,
+  levelIndex: -1,
+  enabled: true,
+};
+
+function syncSoundButton() {
+  soundButton.textContent = audioState.enabled ? "♫" : "🔇";
+  soundButton.setAttribute("aria-pressed", String(audioState.enabled));
+  soundButton.setAttribute("aria-label", audioState.enabled ? "Silenciar música" : "Activar música");
+  soundButton.title = audioState.enabled ? "Silenciar música" : "Activar música";
+}
+
+function ensureAudioContext() {
+  if (audioState.context) return audioState.context;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  try {
+    audioState.context = new AudioContextClass();
+    audioState.master = audioState.context.createGain();
+    audioState.master.gain.value = 0.0001;
+    audioState.master.connect(audioState.context.destination);
+    return audioState.context;
+  } catch (error) {
+    console.warn("El audio ambiental no está disponible en este navegador.", error);
+    return null;
+  }
+}
+
+function stopMusicVoices() {
+  if (audioState.startTimeout) {
+    window.clearTimeout(audioState.startTimeout);
+    audioState.startTimeout = 0;
+  }
+  if (audioState.melodyTimer) {
+    window.clearInterval(audioState.melodyTimer);
+    audioState.melodyTimer = 0;
+  }
+  for (const voice of audioState.voices) {
+    try { voice.stop(); } catch (_) { /* La voz ya había terminado. */ }
+  }
+  audioState.voices = [];
+}
+
+function createAmbientVoice(frequency, type, volume, duration = null) {
+  const audioContext = audioState.context;
+  if (!audioContext || !audioState.master) return;
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  const now = audioContext.currentTime;
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, now);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.linearRampToValueAtTime(volume, now + (duration ? 0.12 : 1.4));
+  if (duration) gain.gain.setTargetAtTime(0.0001, now + duration * 0.62, Math.max(0.12, duration * 0.18));
+  oscillator.connect(gain);
+  gain.connect(audioState.master);
+  oscillator.start(now);
+  if (duration) oscillator.stop(now + duration);
+  audioState.voices.push(oscillator);
+  oscillator.onended = () => {
+    gain.disconnect();
+    oscillator.disconnect();
+    audioState.voices = audioState.voices.filter((voice) => voice !== oscillator);
+  };
+}
+
+function playAmbientNote() {
+  if (!audioState.enabled || audioState.levelIndex < 0 || !audioState.context) return;
+  const preset = AMBIENT_PRESETS[audioState.levelIndex];
+  const frequency = preset.melody[audioState.melodyIndex % preset.melody.length];
+  audioState.melodyIndex++;
+  createAmbientVoice(frequency, "sine", 0.035, 2.5);
+}
+
+function startAmbientMusic(levelIndex) {
+  audioState.levelIndex = levelIndex;
+  syncSoundButton();
+  if (!audioState.enabled) return;
+  const audioContext = ensureAudioContext();
+  if (!audioContext) return;
+  stopMusicVoices();
+  audioState.levelIndex = levelIndex;
+  audioState.melodyIndex = 0;
+  if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+  const now = audioContext.currentTime;
+  audioState.master.gain.cancelScheduledValues(now);
+  audioState.master.gain.setTargetAtTime(0.28, now, 0.7);
+  const preset = AMBIENT_PRESETS[levelIndex] || AMBIENT_PRESETS[0];
+  preset.chords.forEach((frequency, index) => {
+    createAmbientVoice(frequency, index === 1 ? "triangle" : preset.type, index === 0 ? 0.085 : 0.055);
+  });
+  audioState.startTimeout = window.setTimeout(() => {
+    audioState.startTimeout = 0;
+    if (audioState.enabled && audioState.levelIndex === levelIndex) playAmbientNote();
+  }, 1500);
+  audioState.melodyTimer = window.setInterval(playAmbientNote, 4600);
+}
+
+function toggleMusic() {
+  audioState.enabled = !audioState.enabled;
+  if (audioState.enabled) {
+    startAmbientMusic(Math.max(0, state.levelIndex));
+  } else {
+    stopMusicVoices();
+    if (audioState.context && audioState.master) {
+      audioState.master.gain.setTargetAtTime(0.0001, audioState.context.currentTime, 0.12);
+    }
+  }
+  syncSoundButton();
+}
+
+function playJumpscareSound() {
+  if (!audioState.enabled) return;
+  const audioContext = ensureAudioContext();
+  if (!audioContext || !audioState.master) return;
+  if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  const now = audioContext.currentTime;
+  oscillator.type = "sawtooth";
+  oscillator.frequency.setValueAtTime(155, now);
+  oscillator.frequency.exponentialRampToValueAtTime(48, now + 0.32);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.linearRampToValueAtTime(0.12, now + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+  oscillator.connect(gain);
+  gain.connect(audioState.master);
+  oscillator.start(now);
+  oscillator.stop(now + 0.44);
+  oscillator.onended = () => { gain.disconnect(); oscillator.disconnect(); };
+}
+
+function shuffled(items) {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function placeQuestionTiles(path, collectibles) {
+  const count = 1 + Math.floor(Math.random() * 2);
+  const blocked = new Set(collectibles.map((item) => `${item.row}-${item.col}`));
+  blocked.add(`${state.player.row}-${state.player.col}`);
+  blocked.add(`${state.exit.row}-${state.exit.col}`);
+  const pathCells = path.slice(1, -1).filter((cell) => !blocked.has(`${cell.row}-${cell.col}`));
+  let candidates = shuffled(pathCells);
+  if (candidates.length < count) {
+    const pathKeys = new Set(path.map((cell) => `${cell.row}-${cell.col}`));
+    const otherFloor = [];
+    for (let row = 0; row < state.maze.length; row++) {
+      for (let col = 0; col < state.maze[row].length; col++) {
+        const key = `${row}-${col}`;
+        if (state.maze[row][col] === 0 && !blocked.has(key) && !pathKeys.has(key)) otherFloor.push({ row, col });
+      }
+    }
+    candidates = [...candidates, ...shuffled(otherFloor)];
+  }
+  const selected = candidates.slice(0, count);
+  const bank = shuffled(QUESTIONS_BY_LEVEL[state.levelIndex]);
+  return selected.map((cell, index) => {
+    const question = bank[index % bank.length];
+    return { ...question, row: cell.row, col: cell.col, id: `${state.levelIndex}-${index}-${cell.row}-${cell.col}`, solved: false, attempts: 0 };
+  });
+}
+
+function drawQuestionTiles(time) {
+  for (const tile of state.questionTiles) {
+    if (tile.solved) continue;
+    const size = state.tile;
+    const x = state.offsetX + (tile.col + 0.5) * size;
+    const y = state.offsetY + (tile.row + 0.5) * size;
+    const pulse = 1 + Math.sin(time * 0.004 + tile.row) * 0.06;
+    const radius = size * 0.31 * pulse;
+    ctx.save();
+    const halo = ctx.createRadialGradient(x, y, 1, x, y, size * 0.62);
+    halo.addColorStop(0, "rgba(255, 224, 140, .32)");
+    halo.addColorStop(1, "rgba(255, 178, 91, 0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.62, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(28, 17, 43, .96)";
+    ctx.strokeStyle = currentTheme().accent;
+    ctx.lineWidth = Math.max(1.5, size * 0.055);
+    ctx.shadowColor = currentTheme().accent;
+    ctx.shadowBlur = size * 0.22;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = size * 0.18;
+    ctx.fillStyle = "#fff3c3";
+    ctx.font = `700 ${Math.max(14, size * 0.58)}px Georgia, serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("?", x, y + size * 0.015);
+    ctx.restore();
+  }
+}
+
+function openQuestionPrompt(question, target, deltaRow, deltaCol) {
+  state.pendingQuestion = { question, target, deltaRow, deltaCol };
+  state.screen = "question";
+  questionKicker.textContent = `Enigma del mundo · ${state.questionTiles.filter((item) => item.solved).length + 1}/${state.questionTiles.length}`;
+  questionTitle.textContent = "Una casilla misteriosa";
+  questionText.textContent = question.prompt;
+  questionFeedback.textContent = "Elige una respuesta para continuar. Si te atascas, te daremos una pista.";
+  questionChoices.replaceChildren();
+  shuffled(question.options).forEach((option) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "question-option";
+    button.textContent = option;
+    button.addEventListener("click", () => answerQuestion(option, button));
+    questionChoices.appendChild(button);
+  });
+  questionModal.classList.add("visible");
+  questionModal.setAttribute("aria-hidden", "false");
+  const firstChoice = questionChoices.querySelector("button");
+  if (firstChoice) firstChoice.focus({ preventScroll: true });
+}
+
+function answerQuestion(selected, selectedButton) {
+  const pending = state.pendingQuestion;
+  if (!pending || state.screen !== "question") return;
+  const question = pending.question;
+  const correctAnswer = question.options[question.answer];
+  if (selected === correctAnswer) {
+    questionFeedback.textContent = "¡Correcto! La casilla vuelve a brillar.";
+    questionChoices.querySelectorAll("button").forEach((button) => {
+      button.disabled = true;
+      if (button.textContent === correctAnswer) button.classList.add("correct");
+    });
+    window.clearTimeout(state.questionTimeout);
+    state.questionTimeout = window.setTimeout(() => resolveQuestion(true), 420);
+    return;
+  }
+  question.attempts++;
+  selectedButton.classList.add("incorrect");
+  selectedButton.disabled = true;
+  if (question.attempts < 2) {
+    questionFeedback.textContent = `Casi… ${question.hint} Prueba otra vez.`;
+    return;
+  }
+  questionFeedback.textContent = `La respuesta era «${correctAnswer}». ¡Seguimos sin penalización!`;
+  questionChoices.querySelectorAll("button").forEach((button) => {
+    button.disabled = true;
+    if (button.textContent === correctAnswer) button.classList.add("correct");
+  });
+  window.clearTimeout(state.questionTimeout);
+  state.questionTimeout = window.setTimeout(() => resolveQuestion(false), 850);
+}
+
+function resolveQuestion(wasCorrect) {
+  window.clearTimeout(state.questionTimeout);
+  state.questionTimeout = 0;
+  const pending = state.pendingQuestion;
+  if (!pending) return;
+  pending.question.solved = true;
+  state.player = { ...pending.target };
+  state.movePulseUntil = performance.now() + 170;
+  state.pendingQuestion = null;
+  questionModal.classList.remove("visible");
+  questionModal.setAttribute("aria-hidden", "true");
+  state.screen = "playing";
+  mensajeEl.textContent = wasCorrect ? "¡Bien hecho! Sigue buscando los destellos." : "El enigma queda resuelto; la aventura continúa.";
+  updateHud();
+}
+
+function chooseScareLevels() {
+  const levels = shuffled([0, 1, 2, 3, 4]);
+  const count = Math.random() < 0.58 ? 1 : 2;
+  state.scareLevels = levels.slice(0, count);
+}
+
+function showJumpscare(onFinished) {
+  state.screen = "jumpscare";
+  updateHud();
+  jumpscareOverlay.classList.add("visible");
+  jumpscareOverlay.setAttribute("aria-hidden", "false");
+  playJumpscareSound();
+  window.clearTimeout(state.scareTimeout);
+  state.scareTimeout = window.setTimeout(() => {
+    jumpscareOverlay.classList.remove("visible");
+    jumpscareOverlay.setAttribute("aria-hidden", "true");
+    state.scareTimeout = 0;
+    if (typeof onFinished === "function") onFinished();
+  }, 760);
 }
 
 function resizeCanvas() {
@@ -905,6 +1253,7 @@ function drawMaze(time) {
       else drawWallCell(x, y, state.tile, row, col);
     }
   }
+  drawQuestionTiles(time);
   for (const item of state.collectibles) drawCollectible(item, time);
   if (state.transition?.type === "reunion") {
     const progress = clamp((time - state.transition.startedAt) / 1150, 0, 1);
@@ -954,6 +1303,8 @@ function renderFrame(time = 0) {
   if (state.screen === "playing" || state.screen === "transition") {
     state.elapsedMs += Math.max(0, Math.min(delta, 40));
   }
+  const timeLabel = formatTime(state.elapsedMs);
+  if (tiempoPartidaEl.textContent !== timeLabel) tiempoPartidaEl.textContent = timeLabel;
   updateParticles(delta);
   drawParticles(time);
   if (state.maze.length) {
@@ -970,13 +1321,18 @@ function renderFrame(time = 0) {
 
 function updateHud() {
   const theme = currentTheme();
-  nivelEl.textContent = `Nivel ${state.levelIndex + 1} de ${LEVEL_THEMES.length}`;
+  nivelEl.textContent = String(state.levelIndex + 1);
   collectibleLabelEl.textContent = theme.collectibleLabel;
   collectibleCountEl.textContent = `${state.levelCollected}/${theme.collectibles}`;
   if (state.screen === "paused") estadoEl.textContent = "En pausa";
   else if (state.screen === "start") estadoEl.textContent = "Preparando la aventura";
   else if (state.screen === "complete") estadoEl.textContent = "Aventura completada";
+  else if (state.screen === "question") estadoEl.textContent = "Resuelve el enigma";
+  else if (state.screen === "jumpscare") estadoEl.textContent = "Algo se ha movido…";
   else estadoEl.textContent = state.levelCollected === theme.collectibles ? "La Z ya puede recibirte" : "Busca los destellos";
+  pauseButton.textContent = state.screen === "paused" ? "▶" : "Ⅱ";
+  pauseButton.setAttribute("aria-label", state.screen === "paused" ? "Reanudar partida" : "Pausa (tecla P)");
+  syncSoundButton();
 }
 
 function setOverlay(visible, kicker = "", title = "", text = "", buttonLabel = "Continuar") {
@@ -1045,6 +1401,12 @@ function beginLevel(index) {
   state.exit = findFarthestCell(state.maze, state.player);
   const path = findPath(state.maze, state.player, state.exit);
   state.collectibles = placeCollectibles(path, theme.collectibles);
+  state.questionTiles = placeQuestionTiles(path, state.collectibles);
+  if (state.scareLevels.includes(index) && state.collectibles.length) {
+    const hauntedItem = state.collectibles[Math.floor(Math.random() * state.collectibles.length)];
+    hauntedItem.haunted = true;
+  }
+  state.pendingQuestion = null;
   state.levelCollected = 0;
   state.transition = null;
   state.screen = "playing";
@@ -1052,17 +1414,28 @@ function beginLevel(index) {
   calculateBoardGeometry();
   setOverlay(false);
   collectibleModal.classList.remove("visible");
+  questionModal.classList.remove("visible");
+  questionModal.setAttribute("aria-hidden", "true");
+  jumpscareOverlay.classList.remove("visible");
+  jumpscareOverlay.setAttribute("aria-hidden", "true");
+  startAmbientMusic(index);
   mensajeEl.textContent = theme.subtitle;
   updateHud();
 }
 
 function startNewGame() {
+  window.clearTimeout(state.scareTimeout);
+  window.clearTimeout(state.questionTimeout);
+  state.scareTimeout = 0;
+  state.questionTimeout = 0;
   state.levelIndex = 0;
   state.levelCollected = 0;
   state.totalCollected = 0;
   state.elapsedMs = 0;
   state.startedAt = performance.now();
   state.transition = null;
+  state.pendingQuestion = null;
+  chooseScareLevels();
   lastMoveAt = 0;
   beginLevel(0);
 }
@@ -1077,13 +1450,25 @@ function restartGame() {
   startNewGame();
 }
 
-function collectItem(item) {
-  if (item.collected) return;
-  item.collected = true;
-  state.levelCollected++;
-  state.totalCollected++;
+function drawCollectibleModalIcon() {
+  const iconContext = collectibleIconCanvas?.getContext("2d");
+  if (!iconContext) return;
+  iconContext.clearRect(0, 0, collectibleIconCanvas.width, collectibleIconCanvas.height);
+  const time = performance.now();
+  const center = collectibleIconCanvas.width / 2;
+  const radius = 28;
+  switch (state.levelIndex) {
+    case 0: drawPumpkin(iconContext, center, center, radius, time); break;
+    case 1: drawSquirrel(iconContext, center, center, radius, time); break;
+    case 2: drawBat(iconContext, center, center, radius, time); break;
+    case 3: drawCat(iconContext, center, center, radius, time); break;
+    default: drawLoveStar(iconContext, center, center, radius * 1.2, time); break;
+  }
+}
+
+function showCollectibleReward(message) {
   const theme = currentTheme();
-  const message = theme.messages[(state.levelCollected - 1) % theme.messages.length];
+  drawCollectibleModalIcon();
   collectibleKicker.textContent = `Un pequeño tesoro · ${state.levelCollected}/${theme.collectibles}`;
   collectibleTitle.textContent = theme.collectibleSingle;
   collectibleText.textContent = message;
@@ -1091,10 +1476,25 @@ function collectItem(item) {
   collectibleModal.classList.add("visible");
   collectibleModal.setAttribute("aria-hidden", "false");
   state.screen = "collectible";
-  mensajeEl.textContent = message;
   updateHud();
 }
 
+function collectItem(item) {
+  if (item.collected) return;
+  item.collected = true;
+  state.levelCollected++;
+  state.totalCollected++;
+  const theme = currentTheme();
+  const message = theme.messages[(state.levelCollected - 1) % theme.messages.length];
+  mensajeEl.textContent = message;
+  updateHud();
+  if (item.haunted) {
+    item.haunted = false;
+    showJumpscare(() => showCollectibleReward(message));
+    return;
+  }
+  showCollectibleReward(message);
+}
 function closeCollectibleModal() {
   if (state.screen !== "collectible") return;
   collectibleModal.classList.remove("visible");
@@ -1138,6 +1538,11 @@ function attemptMove(deltaRow, deltaCol) {
     mensajeEl.textContent = "Las ramas susurran: por aquí aún no.";
     return;
   }
+  const question = state.questionTiles.find((entry) => !entry.solved && entry.row === row && entry.col === col);
+  if (question) {
+    openQuestionPrompt(question, { row, col }, deltaRow, deltaCol);
+    return;
+  }
   state.player = { row, col };
   state.movePulseUntil = now + 170;
   const item = state.collectibles.find((entry) => !entry.collected && entry.row === row && entry.col === col);
@@ -1166,7 +1571,15 @@ function handleOverlayAction() {
 }
 
 function onKeyDown(event) {
+  const target = event.target;
+  const isEditingText = target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+  if (isEditingText) return;
   const key = event.code || event.key;
+  if (key === "KeyM" || event.key?.toLowerCase() === "m") {
+    event.preventDefault();
+    toggleMusic();
+    return;
+  }
   const isPause = key === "KeyP" || event.key?.toLowerCase() === "p" || key === "Escape";
   if (isPause) {
     event.preventDefault();
@@ -1199,6 +1612,11 @@ function bindTouchControls() {
 function bindGameEvents() {
   overlayButton.addEventListener("click", handleOverlayAction);
   collectibleAction.addEventListener("click", closeCollectibleModal);
+  pauseButton.addEventListener("click", () => {
+    if (state.screen === "playing") showPauseScreen();
+    else if (state.screen === "paused") resumeGame();
+  });
+  soundButton.addEventListener("click", toggleMusic);
   document.addEventListener("keydown", onKeyDown);
   window.addEventListener("resize", resizeCanvas, { passive: true });
   bindTouchControls();

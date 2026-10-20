@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>E & Z: Noche Encantada</title>
+    <meta name="theme-color" content="#100b1d" />
+    <meta name="description" content="Un laberinto romántico de Halloween para recorrer cinco mundos encantados." />
+    <title>E &amp; Z: Noche Encantada</title>
     <link rel="stylesheet" href="style.css" />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Cormorant+Infant:wght@400;500;600;700&family=Creepster&family=Loved+by+the+King&display=swap");
@@ -13,34 +15,33 @@
     <main class="app">
       <header class="hero">
         <p class="eyebrow">Halloween encantado</p>
-        <h1 class="title">E & Z: Noche Encantada</h1>
+        <h1 class="title">E &amp; Z: Noche Encantada</h1>
       </header>
 
-      <section class="stage">
+      <section class="stage" aria-label="Juego del laberinto">
         <div class="hud" aria-live="polite">
           <div class="hud-chip">Nivel <strong id="nivelActual">1</strong></div>
-          <div class="hud-chip"><span id="collectibleLabel">Calabazas</span> <strong id="collectibleCount">0</strong></div>
+          <div class="hud-chip"><span id="collectibleLabel">Calabazas</span> <strong id="collectibleCount">0/5</strong></div>
           <div class="hud-chip">Tiempo <strong id="tiempoPartida">0:00</strong></div>
           <div class="hud-chip">Estado <strong id="estadoPartida">Inicio</strong></div>
-          <button id="pauseButton" class="hud-chip hud-pause" type="button" aria-label="Pausa (tecla P)">❚❚</button>
+          <button id="pauseButton" class="hud-chip hud-control hud-pause" type="button" aria-label="Pausa (tecla P)" title="Pausa">Ⅱ</button>
+          <button id="soundButton" class="hud-chip hud-control hud-sound" type="button" aria-label="Silenciar música" aria-pressed="true" title="Silenciar música">♫</button>
         </div>
 
-        <p id="mensajeBanner" class="mensaje">Cruza el mundo encantado de la E hasta la Z.</p>
+        <p id="mensajeBanner" class="mensaje" aria-live="polite">Cruza el mundo encantado de la E hasta la Z.</p>
 
         <div class="board-shell">
-          <canvas id="laberinto" aria-label="Laberinto romántico de Halloween"></canvas>
+          <canvas id="laberinto" aria-label="Laberinto romántico de Halloween" role="img"></canvas>
 
           <div id="screenOverlay" class="screen-overlay visible" aria-live="polite">
             <div class="screen-panel">
               <p id="overlayKicker" class="panel-kicker">Aventura</p>
-              <h2 id="overlayTitle">E & Z: Noche Encantada</h2>
+              <h2 id="overlayTitle">E &amp; Z: Noche Encantada</h2>
               <div id="overlayProgress" class="progress-dots" aria-hidden="true"></div>
               <p id="overlayText">
-                Mueve la E con flechas, WASD o cruceta táctil. Recolecta objetos del nivel y alcanza la Z brillante.
+                Guía a la E por cinco mundos, reúne sus tesoros y alcanza la Z brillante. Usa flechas o WASD; en móvil, toca la cruceta. Las casillas con ? esconden preguntas cortas y algunos tesoros pueden darte un susto breve. Pulsa P para pausar y M para activar o silenciar la música.
               </p>
-              <div id="dedicationSlot" class="dedication-slot" aria-label="Espacio para dedicatoria">
-                Escribe aquí tu dedicatoria personal...
-              </div>
+              <div id="dedicationSlot" class="dedication-slot" aria-label="Espacio para dedicatoria"></div>
               <button id="overlayButton" class="panel-button" type="button">Empezar</button>
             </div>
           </div>
@@ -55,13 +56,37 @@
       </section>
     </main>
 
-    <div id="collectibleModal" class="card-modal" role="dialog" aria-modal="true" aria-labelledby="collectibleTitle">
+    <div id="collectibleModal" class="card-modal" role="dialog" aria-modal="true" aria-labelledby="collectibleTitle" aria-hidden="true">
       <div class="card-shell">
         <canvas id="collectibleIcon" class="card-icon" width="132" height="132" aria-hidden="true"></canvas>
         <p id="collectibleKicker" class="card-kicker">Recolectable</p>
         <h3 id="collectibleTitle">Mensaje encantado</h3>
         <p id="collectibleText">Contigo hasta los fantasmas se ponen románticos.</p>
         <button id="collectibleAction" class="card-button" type="button">Cerrar</button>
+      </div>
+    </div>
+
+    <div id="questionModal" class="question-modal" role="dialog" aria-modal="true" aria-labelledby="questionTitle" aria-describedby="questionText" aria-hidden="true">
+      <div class="question-shell">
+        <div class="question-mark" aria-hidden="true">?</div>
+        <p id="questionKicker" class="question-kicker">Enigma del mundo</p>
+        <h3 id="questionTitle">Una casilla misteriosa</h3>
+        <p id="questionText">¿Qué guarda el bosque?</p>
+        <div id="questionChoices" class="question-choices"></div>
+        <p id="questionFeedback" class="question-feedback" aria-live="polite">Elige una respuesta para continuar.</p>
+        <p class="question-footnote">No hay penalización: tras dos intentos, el enigma te dejará continuar.</p>
+      </div>
+    </div>
+
+    <div id="jumpscareOverlay" class="jumpscare-overlay" role="alert" aria-live="assertive" aria-hidden="true">
+      <div class="scare-frame">
+        <p class="scare-kicker">Una presencia te ha encontrado</p>
+        <div class="scare-face" aria-hidden="true">
+          <span class="scare-eye scare-eye-left"></span>
+          <span class="scare-eye scare-eye-right"></span>
+          <span class="scare-mouth"></span>
+        </div>
+        <p class="scare-caption">¡BOO! …Vale, puedes seguir 💜</p>
       </div>
     </div>
 
