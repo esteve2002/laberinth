@@ -6,7 +6,7 @@
     <title>E & Z: Noche Encantada</title>
     <link rel="stylesheet" href="style.css" />
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Cormorant+Infant:wght@400;500;600;700&family=Loved+by+the+King&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Cormorant+Infant:wght@400;500;600;700&family=Creepster&family=Loved+by+the+King&display=swap");
     </style>
   </head>
   <body>
@@ -20,7 +20,9 @@
         <div class="hud" aria-live="polite">
           <div class="hud-chip">Nivel <strong id="nivelActual">1</strong></div>
           <div class="hud-chip"><span id="collectibleLabel">Calabazas</span> <strong id="collectibleCount">0</strong></div>
+          <div class="hud-chip">Tiempo <strong id="tiempoPartida">0:00</strong></div>
           <div class="hud-chip">Estado <strong id="estadoPartida">Inicio</strong></div>
+          <button id="pauseButton" class="hud-chip hud-pause" type="button" aria-label="Pausa (tecla P)">❚❚</button>
         </div>
 
         <p id="mensajeBanner" class="mensaje">Cruza el mundo encantado de la E hasta la Z.</p>
@@ -32,6 +34,7 @@
             <div class="screen-panel">
               <p id="overlayKicker" class="panel-kicker">Aventura</p>
               <h2 id="overlayTitle">E & Z: Noche Encantada</h2>
+              <div id="overlayProgress" class="progress-dots" aria-hidden="true"></div>
               <p id="overlayText">
                 Mueve la E con flechas, WASD o cruceta táctil. Recolecta objetos del nivel y alcanza la Z brillante.
               </p>
@@ -54,6 +57,7 @@
 
     <div id="collectibleModal" class="card-modal" role="dialog" aria-modal="true" aria-labelledby="collectibleTitle">
       <div class="card-shell">
+        <canvas id="collectibleIcon" class="card-icon" width="132" height="132" aria-hidden="true"></canvas>
         <p id="collectibleKicker" class="card-kicker">Recolectable</p>
         <h3 id="collectibleTitle">Mensaje encantado</h3>
         <p id="collectibleText">Contigo hasta los fantasmas se ponen románticos.</p>
