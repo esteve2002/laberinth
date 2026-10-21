@@ -168,6 +168,9 @@ const touchButtons = [...document.querySelectorAll(".touch-btn")];
 const pauseButton = document.getElementById("pauseButton");
 const soundButton = document.getElementById("soundButton");
 const tiempoPartidaEl = document.getElementById("tiempoPartida");
+const levelMusicPlayer = document.getElementById("levelMusicPlayer");
+const musicTrackNameEl = document.getElementById("musicTrackName");
+const musicOpenLinkEl = document.getElementById("musicOpenLink");
 const questionModal = document.getElementById("questionModal");
 const questionKicker = document.getElementById("questionKicker");
 const questionTitle = document.getElementById("questionTitle");
@@ -176,7 +179,7 @@ const questionChoices = document.getElementById("questionChoices");
 const questionFeedback = document.getElementById("questionFeedback");
 const jumpscareOverlay = document.getElementById("jumpscareOverlay");
 
-if (!canvas || !ctx || !nivelEl || !collectibleLabelEl || !collectibleCountEl || !estadoEl || !mensajeEl || !overlay || !overlayKicker || !overlayTitle || !overlayText || !overlayButton || !dedicationSlot || !collectibleModal || !collectibleKicker || !collectibleTitle || !collectibleText || !collectibleAction || !pauseButton || !soundButton || !tiempoPartidaEl || !questionModal || !questionKicker || !questionTitle || !questionText || !questionChoices || !questionFeedback || !jumpscareOverlay) {
+if (!canvas || !ctx || !nivelEl || !collectibleLabelEl || !collectibleCountEl || !estadoEl || !mensajeEl || !overlay || !overlayKicker || !overlayTitle || !overlayText || !overlayButton || !dedicationSlot || !collectibleModal || !collectibleKicker || !collectibleTitle || !collectibleText || !collectibleAction || !pauseButton || !soundButton || !tiempoPartidaEl || !levelMusicPlayer || !musicTrackNameEl || !musicOpenLinkEl || !questionModal || !questionKicker || !questionTitle || !questionText || !questionChoices || !questionFeedback || !jumpscareOverlay) {
   throw new Error("Faltan elementos del DOM para inicializar el juego.");
 }
 
@@ -347,30 +350,29 @@ function roundedRect(context, x, y, width, height, radius) {
   context.closePath();
 }
 
-const AMBIENT_PRESETS = [
-  { chords: [110, 164.81, 220], melody: [329.63, 392, 440, 392], type: "sine" },
-  { chords: [146.83, 220, 293.66], melody: [392, 440, 523.25, 440], type: "triangle" },
-  { chords: [82.41, 123.47, 164.81], melody: [246.94, 293.66, 246.94, 185], type: "sine" },
-  { chords: [98, 146.83, 196], melody: [293.66, 349.23, 392, 349.23], type: "triangle" },
-  { chords: [130.81, 196, 261.63], melody: [523.25, 587.33, 659.25, 587.33], type: "sine" },
+// Reproducción autorizada mediante el reproductor oficial de Spotify.
+// El navegador requiere una acción del jugador para iniciar audio externo.
+const BRUNO_MARS_SONGS = [
+  { title: "Grenade", id: "2kXzKG2G7sJdSiGbQoVSR3" },
+  { title: "The Lazy Song", id: "386RUes7n1uM1yfzgeUuwp" },
+  { title: "It Will Rain", id: "0M3HkE321xpCbCYqVKzr1q" },
+  { title: "Locked Out of Heaven", id: "3w3y8KPTfNeOKPiqUTakBh" },
+  { title: "Talking to the Moon", id: "161DnLWsx1i3u1JT05lzqU" },
 ];
 
 const audioState = {
   context: null,
-  master: null,
-  voices: [],
-  melodyTimer: 0,
-  startTimeout: 0,
-  melodyIndex: 0,
-  levelIndex: -1,
+  effectBus: null,
+  compressor: null,
+  levelIndex: 0,
   enabled: true,
 };
 
 function syncSoundButton() {
-  soundButton.textContent = audioState.enabled ? "♫" : "🔇";
+  soundButton.textContent = audioState.enabled ? "🔊" : "🔇";
   soundButton.setAttribute("aria-pressed", String(audioState.enabled));
-  soundButton.setAttribute("aria-label", audioState.enabled ? "Silenciar música" : "Activar música");
-  soundButton.title = audioState.enabled ? "Silenciar música" : "Activar música";
+  soundButton.setAttribute("aria-label", audioState.enabled ? "Silenciar sonido de los sustos" : "Activar sonido de los sustos");
+  soundButton.title = audioState.enabled ? "Silenciar sonido de los sustos" : "Activar sonido de los sustos";
 }
 
 function ensureAudioContext() {
@@ -378,119 +380,108 @@ function ensureAudioContext() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return null;
   try {
-    audioState.context = new AudioContextClass();
-    audioState.master = audioState.context.createGain();
-    audioState.master.gain.value = 0.0001;
-    audioState.master.connect(audioState.context.destination);
-    return audioState.context;
+    const audioContext = new AudioContextClass();
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -12;
+    compressor.knee.value = 5;
+    compressor.ratio.value = 12;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.22;
+    const effectBus = audioContext.createGain();
+    effectBus.gain.value = 0.82;
+    effectBus.connect(compressor);
+    compressor.connect(audioContext.destination);
+    audioState.context = audioContext;
+    audioState.effectBus = effectBus;
+    audioState.compressor = compressor;
+    return audioContext;
   } catch (error) {
-    console.warn("El audio ambiental no está disponible en este navegador.", error);
+    console.warn("Los efectos de sonido no están disponibles en este navegador.", error);
     return null;
   }
 }
 
-function stopMusicVoices() {
-  if (audioState.startTimeout) {
-    window.clearTimeout(audioState.startTimeout);
-    audioState.startTimeout = 0;
-  }
-  if (audioState.melodyTimer) {
-    window.clearInterval(audioState.melodyTimer);
-    audioState.melodyTimer = 0;
-  }
-  for (const voice of audioState.voices) {
-    try { voice.stop(); } catch (_) { /* La voz ya había terminado. */ }
-  }
-  audioState.voices = [];
-}
-
-function createAmbientVoice(frequency, type, volume, duration = null) {
-  const audioContext = audioState.context;
-  if (!audioContext || !audioState.master) return;
-  const oscillator = audioContext.createOscillator();
-  const gain = audioContext.createGain();
-  const now = audioContext.currentTime;
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(frequency, now);
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.linearRampToValueAtTime(volume, now + (duration ? 0.12 : 1.4));
-  if (duration) gain.gain.setTargetAtTime(0.0001, now + duration * 0.62, Math.max(0.12, duration * 0.18));
-  oscillator.connect(gain);
-  gain.connect(audioState.master);
-  oscillator.start(now);
-  if (duration) oscillator.stop(now + duration);
-  audioState.voices.push(oscillator);
-  oscillator.onended = () => {
-    gain.disconnect();
-    oscillator.disconnect();
-    audioState.voices = audioState.voices.filter((voice) => voice !== oscillator);
-  };
-}
-
-function playAmbientNote() {
-  if (!audioState.enabled || audioState.levelIndex < 0 || !audioState.context) return;
-  const preset = AMBIENT_PRESETS[audioState.levelIndex];
-  const frequency = preset.melody[audioState.melodyIndex % preset.melody.length];
-  audioState.melodyIndex++;
-  createAmbientVoice(frequency, "sine", 0.035, 2.5);
-}
-
 function startAmbientMusic(levelIndex) {
+  const song = BRUNO_MARS_SONGS[levelIndex] || BRUNO_MARS_SONGS[0];
   audioState.levelIndex = levelIndex;
-  syncSoundButton();
-  if (!audioState.enabled) return;
-  const audioContext = ensureAudioContext();
-  if (!audioContext) return;
-  stopMusicVoices();
-  audioState.levelIndex = levelIndex;
-  audioState.melodyIndex = 0;
-  if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
-  const now = audioContext.currentTime;
-  audioState.master.gain.cancelScheduledValues(now);
-  audioState.master.gain.setTargetAtTime(0.28, now, 0.7);
-  const preset = AMBIENT_PRESETS[levelIndex] || AMBIENT_PRESETS[0];
-  preset.chords.forEach((frequency, index) => {
-    createAmbientVoice(frequency, index === 1 ? "triangle" : preset.type, index === 0 ? 0.085 : 0.055);
-  });
-  audioState.startTimeout = window.setTimeout(() => {
-    audioState.startTimeout = 0;
-    if (audioState.enabled && audioState.levelIndex === levelIndex) playAmbientNote();
-  }, 1500);
-  audioState.melodyTimer = window.setInterval(playAmbientNote, 4600);
+  musicTrackNameEl.textContent = song.title;
+  musicOpenLinkEl.href = `https://open.spotify.com/track/${song.id}`;
+  levelMusicPlayer.title = `Escuchar ${song.title} de Bruno Mars en Spotify`;
+  const nextSrc = `https://open.spotify.com/embed/track/${song.id}?utm_source=generator&theme=0`;
+  if (levelMusicPlayer.dataset.trackId !== song.id) {
+    levelMusicPlayer.dataset.trackId = song.id;
+    levelMusicPlayer.src = nextSrc;
+  }
 }
 
 function toggleMusic() {
+  // El botón y la tecla M controlan los efectos de susto, no el reproductor externo.
   audioState.enabled = !audioState.enabled;
-  if (audioState.enabled) {
-    startAmbientMusic(Math.max(0, state.levelIndex));
-  } else {
-    stopMusicVoices();
-    if (audioState.context && audioState.master) {
-      audioState.master.gain.setTargetAtTime(0.0001, audioState.context.currentTime, 0.12);
-    }
-  }
   syncSoundButton();
 }
 
 function playJumpscareSound() {
   if (!audioState.enabled) return;
   const audioContext = ensureAudioContext();
-  if (!audioContext || !audioState.master) return;
+  if (!audioContext || !audioState.effectBus) return;
   if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
-  const oscillator = audioContext.createOscillator();
-  const gain = audioContext.createGain();
   const now = audioContext.currentTime;
-  oscillator.type = "sawtooth";
-  oscillator.frequency.setValueAtTime(155, now);
-  oscillator.frequency.exponentialRampToValueAtTime(48, now + 0.32);
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.linearRampToValueAtTime(0.12, now + 0.025);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
-  oscillator.connect(gain);
-  gain.connect(audioState.master);
-  oscillator.start(now);
-  oscillator.stop(now + 0.44);
-  oscillator.onended = () => { gain.disconnect(); oscillator.disconnect(); };
+  const bus = audioState.effectBus;
+
+  // Un chillido sintetizado, un golpe grave y un soplo de ruido: original y sin audio externo.
+  const scream = audioContext.createOscillator();
+  const screamGain = audioContext.createGain();
+  scream.type = "sawtooth";
+  scream.frequency.setValueAtTime(520, now);
+  scream.frequency.exponentialRampToValueAtTime(1480, now + 0.11);
+  scream.frequency.exponentialRampToValueAtTime(390, now + 0.68);
+  screamGain.gain.setValueAtTime(0.0001, now);
+  screamGain.gain.exponentialRampToValueAtTime(0.46, now + 0.022);
+  screamGain.gain.setValueAtTime(0.38, now + 0.15);
+  screamGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.72);
+  scream.connect(screamGain);
+  screamGain.connect(bus);
+  scream.start(now);
+  scream.stop(now + 0.74);
+  scream.onended = () => { screamGain.disconnect(); scream.disconnect(); };
+
+  const undertone = audioContext.createOscillator();
+  const underGain = audioContext.createGain();
+  undertone.type = "triangle";
+  undertone.frequency.setValueAtTime(132, now);
+  undertone.frequency.exponentialRampToValueAtTime(37, now + 0.34);
+  underGain.gain.setValueAtTime(0.0001, now);
+  underGain.gain.exponentialRampToValueAtTime(0.5, now + 0.018);
+  underGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+  undertone.connect(underGain);
+  underGain.connect(bus);
+  undertone.start(now);
+  undertone.stop(now + 0.44);
+  undertone.onended = () => { underGain.disconnect(); undertone.disconnect(); };
+
+  const sampleRate = audioContext.sampleRate;
+  const noiseBuffer = audioContext.createBuffer(1, Math.floor(sampleRate * 0.72), sampleRate);
+  const noiseData = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < noiseData.length; i++) {
+    noiseData[i] = (Math.random() * 2 - 1) * (1 - i / noiseData.length) * 0.9;
+  }
+  const noise = audioContext.createBufferSource();
+  const filter = audioContext.createBiquadFilter();
+  const noiseGain = audioContext.createGain();
+  noise.buffer = noiseBuffer;
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(1850, now);
+  filter.frequency.exponentialRampToValueAtTime(3600, now + 0.12);
+  filter.Q.value = 0.85;
+  noiseGain.gain.setValueAtTime(0.0001, now);
+  noiseGain.gain.linearRampToValueAtTime(0.25, now + 0.014);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+  noise.connect(filter);
+  filter.connect(noiseGain);
+  noiseGain.connect(bus);
+  noise.start(now);
+  noise.stop(now + 0.73);
+  noise.onended = () => { noiseGain.disconnect(); filter.disconnect(); noise.disconnect(); };
 }
 
 function shuffled(items) {
@@ -641,6 +632,15 @@ function chooseScareLevels() {
 function showJumpscare(onFinished) {
   state.screen = "jumpscare";
   updateHud();
+  const scareFace = jumpscareOverlay.querySelector(".scare-face");
+  if (scareFace) {
+    const variants = ["face-ashen", "face-hollow", "face-withered"];
+    scareFace.classList.remove(...variants);
+    scareFace.classList.add(variants[Math.floor(Math.random() * variants.length)]);
+  }
+  const scareCaptions = ["¡TE HE ENCONTRADO!", "NO DEBERÍAS HABER VENIDO…", "MÍRAME A LOS OJOS"];
+  const caption = jumpscareOverlay.querySelector(".scare-caption");
+  if (caption) caption.textContent = scareCaptions[Math.floor(Math.random() * scareCaptions.length)];
   jumpscareOverlay.classList.add("visible");
   jumpscareOverlay.setAttribute("aria-hidden", "false");
   playJumpscareSound();
@@ -650,7 +650,7 @@ function showJumpscare(onFinished) {
     jumpscareOverlay.setAttribute("aria-hidden", "true");
     state.scareTimeout = 0;
     if (typeof onFinished === "function") onFinished();
-  }, 760);
+  }, 1120);
 }
 
 function resizeCanvas() {
@@ -1348,7 +1348,7 @@ function showStartScreen() {
   state.screen = "start";
   state.transition = null;
   dedicationSlot.classList.remove("visible");
-  setOverlay(true, "Un cuento solo nuestro", "Donde termina la niebla", "Recorre cinco mundos encantados, recoge sus pequeños tesoros y encuentra la Z. Mueve a la E con las flechas o WASD; en móvil, usa los controles táctiles. Pulsa P para pausar.", "Empezar");
+  setOverlay(true, "Un cuento solo nuestro", "Donde termina la niebla", "Recorre cinco mundos encantados, recoge sus tesoros y encuentra la Z. Usa flechas o WASD; en móvil, los controles táctiles. Cada mapa cambia la canción de Bruno Mars en el reproductor: pulsa reproducir para escucharla. Algunos tesoros esconden un susto con cara espectral. Pulsa P para pausar y M para silenciar o activar sus efectos de sonido.", "Empezar");
   mensajeEl.textContent = "Hay un camino secreto que solo se abre siguiendo el corazón.";
   updateHud();
 }

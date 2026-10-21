@@ -25,7 +25,7 @@
           <div class="hud-chip">Tiempo <strong id="tiempoPartida">0:00</strong></div>
           <div class="hud-chip">Estado <strong id="estadoPartida">Inicio</strong></div>
           <button id="pauseButton" class="hud-chip hud-control hud-pause" type="button" aria-label="Pausa (tecla P)" title="Pausa">Ⅱ</button>
-          <button id="soundButton" class="hud-chip hud-control hud-sound" type="button" aria-label="Silenciar música" aria-pressed="true" title="Silenciar música">♫</button>
+          <button id="soundButton" class="hud-chip hud-control hud-sound" type="button" aria-label="Silenciar sonido de los sustos" aria-pressed="true" title="Silenciar sonido de los sustos">🔊</button>
         </div>
 
         <p id="mensajeBanner" class="mensaje" aria-live="polite">Cruza el mundo encantado de la E hasta la Z.</p>
@@ -39,13 +39,23 @@
               <h2 id="overlayTitle">E &amp; Z: Noche Encantada</h2>
               <div id="overlayProgress" class="progress-dots" aria-hidden="true"></div>
               <p id="overlayText">
-                Guía a la E por cinco mundos, reúne sus tesoros y alcanza la Z brillante. Usa flechas o WASD; en móvil, toca la cruceta. Las casillas con ? esconden preguntas cortas y algunos tesoros pueden darte un susto breve. Pulsa P para pausar y M para activar o silenciar la música.
+                Guía a la E por cinco mundos, reúne sus tesoros y alcanza la Z brillante. Usa flechas o WASD; en móvil, toca la cruceta. Las casillas con ? esconden preguntas cortas y algunos tesoros pueden darte un susto. Pulsa ▶ en el reproductor de Bruno Mars para escuchar la canción de cada mundo, P para pausar y M para activar o silenciar los sonidos de susto.
               </p>
               <div id="dedicationSlot" class="dedication-slot" aria-label="Espacio para dedicatoria"></div>
               <button id="overlayButton" class="panel-button" type="button">Empezar</button>
             </div>
           </div>
         </div>
+
+        <aside class="music-dock" aria-label="Banda sonora de Bruno Mars">
+          <div class="music-meta">
+            <span class="music-eyebrow">Banda sonora · Bruno Mars</span>
+            <strong id="musicTrackName">Grenade</strong>
+            <a id="musicOpenLink" href="https://open.spotify.com/track/2kXzKG2G7sJdSiGbQoVSR3" target="_blank" rel="noopener noreferrer">Abrir en Spotify ↗</a>
+            <span class="music-hint">Pulsa reproducir en el reproductor. Cada mundo tiene su canción.</span>
+          </div>
+          <iframe id="levelMusicPlayer" class="spotify-player" title="Escuchar Grenade de Bruno Mars en Spotify" src="https://open.spotify.com/embed/track/2kXzKG2G7sJdSiGbQoVSR3?utm_source=generator&amp;theme=0" width="352" height="80" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        </aside>
 
         <div class="touch-controls" aria-label="Controles táctiles">
           <button class="touch-btn up" data-dir="up" type="button" aria-label="Mover arriba">↑</button>
@@ -80,13 +90,22 @@
 
     <div id="jumpscareOverlay" class="jumpscare-overlay" role="alert" aria-live="assertive" aria-hidden="true">
       <div class="scare-frame">
-        <p class="scare-kicker">Una presencia te ha encontrado</p>
+        <p class="scare-kicker">NO ESTÁS A SOLAS</p>
         <div class="scare-face" aria-hidden="true">
-          <span class="scare-eye scare-eye-left"></span>
-          <span class="scare-eye scare-eye-right"></span>
-          <span class="scare-mouth"></span>
+          <div class="scare-hair scare-hair-left"></div>
+          <div class="scare-hair scare-hair-right"></div>
+          <span class="scare-crack scare-crack-one"></span>
+          <span class="scare-crack scare-crack-two"></span>
+          <span class="scare-brow scare-brow-left"></span>
+          <span class="scare-brow scare-brow-right"></span>
+          <span class="scare-eye scare-eye-left"><i></i></span>
+          <span class="scare-eye scare-eye-right"><i></i></span>
+          <span class="scare-nose"></span>
+          <span class="scare-mouth"><i></i><b></b></span>
+          <span class="scare-tear scare-tear-left"></span>
+          <span class="scare-tear scare-tear-right"></span>
         </div>
-        <p class="scare-caption">¡BOO! …Vale, puedes seguir 💜</p>
+        <p class="scare-caption">¡TE HE ENCONTRADO!</p>
       </div>
     </div>
 
